@@ -13,24 +13,6 @@ Ensure you have the following installed on your system:
 - pip (Python package manager)
 - Virtual environment tool (optional but recommended)
 
-### Directory Structure
-
-The backend directory structure is as follows:
-
-```
-backend/
-    app.py
-    requirements.txt
-    .env
-    .env.example
-    config/
-        db.py
-    models/
-    routes/
-        auth.py
-    schemas/
-```
-
 ### Setup Instructions
 
 1. **Clone the Repository**
@@ -91,6 +73,32 @@ backend/
    ```
    http://127.0.0.1:8000/api/health
    ```
+
+### Directory Structure
+
+The backend directory structure is as follows:
+
+```
+backend/
+    app.py
+    requirements.txt
+    .env
+    .env.example
+    config/ -- all configurations (databases, loggers,  HTTP libraries, etc...)
+        db.py
+    models/ -- ORM Models
+    routes/
+        auth.py
+    schemas/ -- Database Schemas
+```
+
+### Documentation
+
+We use SWAGGER to document all api endpoints
+
+```
+http://127.0.0.1:8000/docs
+```
 
 ### Additional Notes
 
