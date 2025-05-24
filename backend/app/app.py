@@ -1,18 +1,25 @@
 from fastapi import FastAPI, Depends
-from config.db import get_db
-from routes.auth import auth
+from contextlib import asynccontextmanager
+from app.db.session import init_db, get_session
+from app.api.routes import auth, users
 import os
 from dotenv import load_dotenv
 from sqlalchemy import text
 
 load_dotenv()
 
-app = FastAPI(root_path=os.getenv("API_PREFIX", "/api"), )
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await init_db()
+    yield
 
-app.include_router(auth, prefix="/auth", tags=["auth"])
+app = FastAPI(root_path=os.getenv("API_PREFIX", "/api"), lifespan=lifespan)
+
+app.include_router(auth.router, prefix="/auth", tags=["auth"])
+app.include_router(users.router, prefix="/users", tags=["auth"])
 
 @app.get("/health")
-async def health(db=Depends(get_db)):
+async def health(db=Depends(get_session)):
     """
     Health check endpoint to verify if the API is running and the database connection is healthy.
     """
