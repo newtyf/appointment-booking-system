@@ -1,36 +1,33 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI
 from contextlib import asynccontextmanager
-from app.db.session import init_db, get_session
-from app.api.routes import auth, users
-import os
-from dotenv import load_dotenv
+from app.db.session import sessionmanager
+from app.api.routes import users
+from app.core.config import settings
 from sqlalchemy import text
+from app.db.base import Base
 
-load_dotenv()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await init_db()
+    async with sessionmanager.connect() as conn:
+        if settings.ENVIRONMENT == "development":
+            await conn.run_sync(Base.metadata.create_all)
     yield
+    await sessionmanager.close()
 
-app = FastAPI(root_path=os.getenv("API_PREFIX", "/api"), lifespan=lifespan)
+app = FastAPI(root_path=settings.API_PREFIX, lifespan=lifespan)
 
-app.include_router(auth.router, prefix="/auth", tags=["auth"])
-app.include_router(users.router, prefix="/users", tags=["auth"])
+app.include_router(users.router)
+
 
 @app.get("/health")
-async def health(db=Depends(get_session)):
+async def health():
     """
-    Health check endpoint to verify if the API is running and the database connection is healthy.
+    Health check endpoint to verify if the API is running healthy.
     """
-    try:
-        # Execute a simple query to check database connectivity
-        result = await db.execute(text("SELECT 1"))
+    async with sessionmanager.connect() as conn:
+        # Perform a simple query to check the database connection
+        result = await conn.execute(text("SELECT 1"))
         if result.scalar() != 1:
-            raise Exception("Unexpected result from database query")
-    except Exception as e:
-        # If there is an error, return a 500 response with the error message
-        return {"status": "unhealthy", "error": str(e)}
-    # If the query is successful, return a 200 response
-    # with a healthy status
+            return {"status": "unhealthy"}
     return {"status": "healthy"}

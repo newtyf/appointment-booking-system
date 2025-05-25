@@ -2,106 +2,124 @@
 
 ## Project Setup
 
-This document provides instructions to set up and run the backend of the Appointment Booking System.
+Este documento proporciona instrucciones para configurar y ejecutar el backend del Appointment Booking System.
 
-### Prerequisites
+### Prerrequisitos
 
-Ensure you have the following installed on your system:
+Asegúrate de tener instalado en tu sistema:
 
-- Python 3.10 or higher
+- Python 3.10 o superior
 - MySQL Server
-- pip (Python package manager)
-- Virtual environment tool (optional but recommended)
+- pip (gestor de paquetes de Python)
+- Herramienta de entornos virtuales (opcional, pero recomendado)
 
-### Setup Instructions
+### Instrucciones de Configuración
 
-1. **Clone the Repository**
-
-   Clone the repository to your local machine:
+1. **Clona el repositorio**
 
    ```bash
    git clone <repository-url>
    cd appointment-booking-system/backend
    ```
 
-2. **Set Up a Virtual Environment** (Optional but recommended)
-
-   Create and activate a virtual environment:
+2. **Crea y activa un entorno virtual** (opcional, pero recomendado)
 
    ```bash
    python3 -m venv venv
-   source venv/bin/activate  # On macOS/Linux
-   venv\Scripts\activate   # On Windows
+   source venv/bin/activate  # En macOS/Linux
+   venv\Scripts\activate   # En Windows
    ```
 
-3. **Install Dependencies**
-
-   Install the required Python packages:
+3. **Instala las dependencias**
 
    ```bash
    pip install -r requirements.txt
    ```
 
-4. **Configure Environment Variables**
+4. **Configura las variables de entorno**
 
-   Copy the `.env.example` file to `.env` and update the values as needed:
+   Copia el archivo `.env.example` a `.env` y actualiza los valores según tu entorno:
 
    ```bash
    cp .env.example .env
    ```
 
-   Update the `.env` file with your MySQL database credentials and API prefix.
+   Modifica el archivo `.env` con tus credenciales de base de datos MySQL y el prefijo de la API.
 
-5. **Run the Database Server**
+5. **Ejecuta el servidor de base de datos**
 
-   Ensure your MySQL server is running and accessible with the credentials provided in the `.env` file.
+   Asegúrate de que tu servidor MySQL esté en funcionamiento y accesible con las credenciales proporcionadas en el archivo `.env`.
 
-6. **Run the Application**
+6. **Ejecuta la aplicación**
 
-   Start the FastAPI application using the `fastapi dev` command, which integrates Uvicorn under the hood:
+   > **IMPORTANTE:** Debes estar ubicado en la carpeta `backend` antes de ejecutar la aplicación para que Pydantic Settings detecte correctamente el archivo `.env`.
+
+   Inicia la aplicación FastAPI usando el siguiente comando:
 
    ```bash
-   fastapi dev app.py
+   fastapi dev app/app.py
    ```
 
-   The application will be available at `http://127.0.0.1:8000` by default.
+   La aplicación estará disponible por defecto en `http://127.0.0.1:8000`.
 
 7. **Health Check**
 
-   Verify the application is running and the database connection is healthy by visiting the health check endpoint:
+   Verifica que la aplicación esté corriendo y la conexión a la base de datos sea exitosa visitando:
 
    ```
    http://127.0.0.1:8000/api/health
    ```
 
-### Directory Structure
+### Estructura del Proyecto
 
-The backend directory structure is as follows:
+La estructura del backend es la siguiente:
 
 ```
 backend/
-    app.py
-    requirements.txt
-    .env
-    .env.example
-    config/ -- all configurations (databases, loggers,  HTTP libraries, etc...)
-        db.py
-    models/ -- ORM Models
-    routes/
-        auth.py
-    schemas/ -- Database Schemas
+    README.md                  # Documentación del backend
+    requirements.txt           # Dependencias del proyecto
+    .env                       # Variables de entorno (no versionado)
+    .env.example               # Ejemplo de variables de entorno
+    app/                       # Código fuente principal de la aplicación
+        __init__.py            # Inicialización del módulo app
+        app.py                 # Punto de entrada de la aplicación FastAPI
+        api/                   # Lógica relacionada con la API
+            __init__.py
+            dependencies/      # Dependencias y utilidades para la API
+                __init__.py
+                deps.py        # Funciones de dependencias (auth, db, etc)
+            routes/            # Definición de rutas/endpoints
+                __init__.py
+                auth.py        # Rutas de autenticación
+                users.py       # Rutas de usuarios
+        core/                  # Configuración y utilidades centrales
+            __init__.py
+            config.py          # Configuración general y de entorno
+            security.py        # Utilidades de seguridad (hash, JWT, etc)
+        db/                    # Configuración y utilidades de base de datos
+            __init__.py
+            base.py            # Declaración base de modelos
+            session.py         # Sesión y conexión a la base de datos
+        models/                # Modelos ORM
+            __init__.py
+            user.py            # Modelo de usuario
+        schemas/               # Esquemas Pydantic (serialización/validación)
+            user.py            # Esquema de usuario
+        services/              # Lógica de negocio y servicios
+            __init__.py
+            user_service.py    # Servicio relacionado a usuarios
 ```
 
-### Documentation
+### Documentación
 
-We use SWAGGER to document all api endpoints
+Utilizamos SWAGGER para documentar todos los endpoints de la API:
 
 ```
 http://127.0.0.1:8000/docs
 ```
 
-### Additional Notes
+### Notas Adicionales
 
-- Use the `requirements.txt` file to manage dependencies.
-- The `.env` file is ignored by Git for security reasons. Do not share it publicly.
-- For any issues, refer to the logs or contact the project maintainer.
+- Usa el archivo `requirements.txt` para gestionar las dependencias.
+- El archivo `.env` está ignorado por Git por razones de seguridad. No lo compartas públicamente.
+- Para cualquier inconveniente, revisa los logs o contacta al responsable del proyecto.

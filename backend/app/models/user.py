@@ -1,10 +1,17 @@
-from pydantic import BaseModel
+# backend/app/models/user.py
+from sqlalchemy import Integer, String, Boolean
+from sqlalchemy.orm import Mapped, mapped_column # Importa estos
+from app.db.base import Base
 
-class User(BaseModel):
-    username: str
-    email: str | None = None
-    full_name: str | None = None
-    disabled: bool | None = None
+class User(Base):
+    __tablename__ = "users"
 
-class UserInDB(User):
-    hashed_password: str
+    # Usamos Mapped[tipo_python] para el type hint
+    # y mapped_column para la definición de la columna de SQLAlchemy
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    email: Mapped[str] = mapped_column(String(length=50), unique=True, index=True)
+    hashed_password: Mapped[str] = mapped_column(String(length=50)) # Ahora el type hint es str
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True) # También para boolean
+
+    def __repr__(self):
+        return f"<User(id={self.id}, email='{self.email}')>"

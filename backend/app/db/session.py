@@ -1,39 +1,60 @@
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
-from app.schemas import Base
-import os
-from dotenv import load_dotenv
-load_dotenv()
+import contextlib
+from typing import Any, AsyncIterator
 
-# Validate environment variables
-required_env_vars = ["MYSQL_DB_USER", "MYSQL_DB_PASSWORD", "MYSQL_DB_HOST", "MYSQL_DB_PORT", "MYSQL_DB_NAME"]
-missing_vars = [var for var in required_env_vars if not os.getenv(var)]
-
-if missing_vars:
-    raise EnvironmentError(f"Missing required environment variables: {', '.join(missing_vars)}")
+from sqlalchemy.ext.asyncio import (
+    AsyncConnection,
+    async_sessionmaker,
+    create_async_engine,
+)
+from app.core.config import settings
 
 DATABASE_URL = (
-    f"mysql+aiomysql://{os.getenv('MYSQL_DB_USER')}:{os.getenv('MYSQL_DB_PASSWORD')}"
-    f"@{os.getenv('MYSQL_DB_HOST')}:{os.getenv('MYSQL_DB_PORT')}/{os.getenv('MYSQL_DB_NAME')}"
+    f"mysql+aiomysql://{settings.MYSQL_DB_USER}:{settings.MYSQL_DB_PASSWORD}"
+    f"@{settings.MYSQL_DB_HOST}:{settings.MYSQL_DB_PORT}/{settings.MYSQL_DB_NAME}"
 )
 
-print(DATABASE_URL)
+class DatabaseSessionManager:
+    def __init__(self, host: str, engine_kwargs: dict[str, Any] = {}):
+        self._engine = create_async_engine(host, **engine_kwargs)
+        self._sessionmaker = async_sessionmaker(autocommit=False, bind=self._engine)
+        print(f"DatabaseSessionManager initialized with host: {host}")
 
-# Create the async engine
-engine = create_async_engine(DATABASE_URL, echo=True)
+    async def close(self):
+        if self._engine is None:
+            raise Exception("DatabaseSessionManager is not initialized")
+        await self._engine.dispose()
 
-# Create the async session factory
-async_session = sessionmaker(
-    bind=engine,
-    class_=AsyncSession,
-    expire_on_commit=False
-)
+        self._engine = None
+        self._sessionmaker = None
 
-async def init_db():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    @contextlib.asynccontextmanager
+    async def connect(self) -> AsyncIterator[AsyncConnection]:
+        if self._engine is None:
+            raise Exception("DatabaseSessionManager is not initialized")
 
-# Dependency to get the session
-async def get_session():
-    async with async_session() as session:
+        async with self._engine.begin() as connection:
+            try:
+                yield connection
+            except Exception:
+                await connection.rollback()
+                raise
+
+    @contextlib.asynccontextmanager
+    async def session(self):
+        if self._sessionmaker is None:
+            raise Exception("DatabaseSessionManager is not initialized")
+
+        session = self._sessionmaker()
+        try:
+            yield session
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
+
+sessionmanager = DatabaseSessionManager(DATABASE_URL, {"echo": settings.echo_sql})
+
+async def get_db_session():
+    async with sessionmanager.session() as session:
         yield session
