@@ -4,7 +4,7 @@
 
 Este documento proporciona instrucciones para configurar y ejecutar el backend del Appointment Booking System.
 
-### Prerrequisitos
+### Pre-requisitos
 
 Asegúrate de tener instalado en tu sistema:
 
@@ -87,10 +87,10 @@ backend/
             __init__.py
             dependencies/      # Dependencias y utilidades para la API
                 __init__.py
-                deps.py        # Funciones de dependencias (auth, db, etc)
+                deps.py        # Funciones de dependencias (auth, db, roles)
             routes/            # Definición de rutas/endpoints
                 __init__.py
-                auth.py        # Rutas de autenticación
+                auth.py        # Rutas de autenticación (login, registro)
                 users.py       # Rutas de usuarios
         core/                  # Configuración y utilidades centrales
             __init__.py
@@ -102,11 +102,14 @@ backend/
             session.py         # Sesión y conexión a la base de datos
         models/                # Modelos ORM
             __init__.py
-            user.py            # Modelo de usuario
+            user.py            # Modelo de usuario (ahora con roles)
         schemas/               # Esquemas Pydantic (serialización/validación)
+            auth.py            # Esquemas de autenticación (login, token)
             user.py            # Esquema de usuario
         services/              # Lógica de negocio y servicios
             __init__.py
+            auth_service.py    # Servicio de autenticación (login, registro, JWT)
+            role_service.py    # Servicio para validación de roles
             user_service.py    # Servicio relacionado a usuarios
 ```
 
