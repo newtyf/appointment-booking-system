@@ -1,10 +1,12 @@
-from fastapi import FastAPI
 from contextlib import asynccontextmanager
-from app.db.session import sessionmanager
-from app.api.routes import users
-from app.core.config import settings
+
+from fastapi import FastAPI
 from sqlalchemy import text
+
+from app.api.routes import auth, users
+from app.core.config import settings
 from app.db.base import Base
+from app.db.session import sessionmanager
 
 
 @asynccontextmanager
@@ -18,7 +20,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(root_path=settings.API_PREFIX, lifespan=lifespan)
 
 app.include_router(users.router)
-
+app.include_router(auth.router)
 
 @app.get("/health")
 async def health():

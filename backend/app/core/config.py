@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     MYSQL_DB_PORT: int | None = None
     MYSQL_DB_NAME: str | None = None
     ENVIRONMENT: str | None = None
+    SECRET_KEY: str = "test" # Clave secreta para JWT
+    ALGORITHM: str = "HS256" # Algoritmo de JWT
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30 # Tiempo de expiración del token de acceso
 
     model_config = SettingsConfigDict(
         env_file=".env",

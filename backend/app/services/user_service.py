@@ -1,9 +1,9 @@
-from sqlalchemy.ext.asyncio import AsyncSession  # Importa AsyncSession
 from sqlalchemy import select  # Importa select para consultas asíncronas
+from sqlalchemy.ext.asyncio import AsyncSession  # Importa AsyncSession
+
+from app.core.security import get_password_hash
 from app.models.user import User
 from app.schemas.user import UserCreate, UserUpdate, UserInDB
-from app.core.security import fake_hash_password
-
 
 class UserService:
     def __init__(self, db: AsyncSession):  # Ahora acepta AsyncSession
@@ -20,7 +20,7 @@ class UserService:
         return result.scalars().first()
 
     async def create_user(self, user: UserCreate) -> User:
-        hashed_password = fake_hash_password(user.password)
+        hashed_password = get_password_hash(user.password)
         db_user = User(email=user.email, hashed_password=hashed_password)
         self.db.add(db_user)
         await self.db.commit()  # await commit
@@ -36,7 +36,7 @@ class UserService:
 
         for key, value in update_data.items():
             if key == "password" and value:
-                db_user.hashed_password = fake_hash_password(value)
+                db_user.hashed_password = get_password_hash(value)
             elif hasattr(db_user, key):
                 setattr(db_user, key, value)
 

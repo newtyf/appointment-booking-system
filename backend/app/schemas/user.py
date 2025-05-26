@@ -13,6 +13,7 @@ class UserUpdate(UserBase):
 class UserInDB(UserBase):
     id: int
     is_active: bool
+    role: str
 
     class Config:
         from_attributes = True # Permite que Pydantic lea datos directamente de un objeto ORM
