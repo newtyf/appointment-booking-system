@@ -7,6 +7,7 @@ from app.api.routes import auth, users
 from app.core.config import settings
 from app.db.base import Base
 from app.db.session import sessionmanager
+from app.models import *
 
 
 @asynccontextmanager
