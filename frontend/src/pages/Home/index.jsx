@@ -2,11 +2,17 @@ import InsideLayout from '../../layouts/InsideLayout';
 
 const Home = () => {
   return (
-    <InsideLayout>
-      <div className="text-center">
-        <h2 className="text-3xl font-bold mb-4">Bienvenido a Appointment Booking System</h2>
-        <p className="text-lg text-gray-700 mb-6">Gestiona tus citas de manera fácil y rápida.</p>
-        <img src="/vite.svg" alt="Logo" className="mx-auto w-24 h-24 mb-4" />
+    <InsideLayout> 
+      <div className="container mx-auto bg-white p-8 rounded-lg shadow-md">
+        <h1 className="text-3xl font-bold text-gray-800 mb-4">
+          ¡Bienvenido al Dashboard!
+        </h1>
+        <p className="text-gray-600 mb-6">
+          Aquí podrás gestionar tus citas y ver la información relevante.
+        </p>
+        <p className="text-gray-500 text-sm">
+          Este es un dashboard básico. Próximamente añadiremos más funcionalidades.
+        </p>
       </div>
     </InsideLayout>
   );
