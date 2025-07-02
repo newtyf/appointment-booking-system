@@ -2,5 +2,8 @@
   "conventionalCommits.scopes": [
     "frontend",
     "backend",
-  ]
+  ],
+  "files.exclude": {
+    "**/__pycache__": true
+  }
 }
