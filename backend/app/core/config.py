@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     test: bool = False
     project_name: str = "My FastAPI project"
     oauth_token_secret: str = "my_dev_secret"
-    API_PREFIX: str = "/api/v1"
+    API_PREFIX: str = "/api"
     MYSQL_DB_PASSWORD: str | None = None
     MYSQL_DB_USER: str | None = None
     MYSQL_DB_HOST: str | None = None
