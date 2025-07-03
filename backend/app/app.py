@@ -26,6 +26,7 @@ app.mount("/", StaticFiles(directory="app/static", html=True), name="static")
 app.include_router(users.router, prefix=settings.API_PREFIX)
 app.include_router(auth.router, prefix=settings.API_PREFIX)
 
+
 @app.get("/health")
 async def health():
     """
@@ -36,4 +37,4 @@ async def health():
         result = await conn.execute(text("SELECT 1"))
         if result.scalar() != 1:
             return {"status": "unhealthy"}
-    return {"status": "healthy"}
+    return {"status": "healthy mi king"}
