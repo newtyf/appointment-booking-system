@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
 from app.api.routes import auth, users
@@ -18,10 +19,12 @@ async def lifespan(app: FastAPI):
     yield
     await sessionmanager.close()
 
-app = FastAPI(root_path=settings.API_PREFIX, lifespan=lifespan)
+app = FastAPI(lifespan=lifespan)
 
-app.include_router(users.router)
-app.include_router(auth.router)
+app.mount("/", StaticFiles(directory="app/static", html=True), name="static")
+
+app.include_router(users.router, prefix=settings.API_PREFIX)
+app.include_router(auth.router, prefix=settings.API_PREFIX)
 
 @app.get("/health")
 async def health():

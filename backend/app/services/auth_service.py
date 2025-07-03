@@ -28,7 +28,7 @@ class AuthService:
 
         # Crear usuario
         hashed_password = get_password_hash(user_create.password)
-        db_user = User(email=user_create.email, hashed_password=hashed_password)
+        db_user = User(name=user_create.name, email=user_create.email, phone=user_create.phone, hashed_password=hashed_password)
 
         self.db.add(db_user)
         await self.db.commit()
