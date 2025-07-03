@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
 from sqlalchemy import text
 
 from app.api.routes import auth, users
@@ -21,11 +21,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-app.mount("/", StaticFiles(directory="app/static", html=True), name="static")
-
 app.include_router(users.router, prefix=settings.API_PREFIX)
 app.include_router(auth.router, prefix=settings.API_PREFIX)
-
 
 @app.get("/health")
 async def health():
@@ -38,3 +35,9 @@ async def health():
         if result.scalar() != 1:
             return {"status": "unhealthy"}
     return {"status": "healthy mi king"}
+
+@app.get("/{full_path:path}", include_in_schema=False)
+async def serve_spa_root(full_path: str):
+    if full_path.startswith(settings.API_PREFIX.strip("/")) or full_path.startswith("health"):
+        raise HTTPException(status_code=404, detail="Not Found")
+    return FileResponse("app/static/index.html")
