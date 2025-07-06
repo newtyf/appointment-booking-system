@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db_session
 from app.models.user import User
-from app.services import AuthService, RoleChecker, UserService
+from app.services import AuthService, RoleChecker, UserService, AppointmentService
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
@@ -18,6 +18,9 @@ def get_auth_service(
     user_service: Annotated[UserService, Depends(get_user_service)]
 ) -> AuthService:
     return AuthService(db, user_service)
+
+def get_appointment_service(db: AsyncSession = Depends(get_db_session)) -> AppointmentService:
+    return AppointmentService(db)
 
 # Dependencia para validar si el usuario está autenticado y obtener su información
 async def get_current_user(
