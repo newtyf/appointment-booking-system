@@ -1,40 +1,41 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { 
-  Home, 
-  CalendarCheck, 
-  CalendarPlus,  
-  History,       
-  Users,         
-  UserCog,       
-  Settings,      
-  LogOut         
+import {
+  Home,
+  CalendarCheck,
+  CalendarPlus,
+  History,
+  Users,
+  UserCog,
+  Settings,
+  LogOut
 } from 'lucide-react';
+import MonarcaLogo from '../assets/monarcaLogo.png';
 
 const Sidebar = () => {
   const location = useLocation();
 
   const navItems = [
-    { name: 'Dashboard', path: '/', icon: Home },
-    { name: 'Mis Citas', path: '/mis-citas', icon: CalendarCheck }, // EN ESPAÑOL
-    { section: 'Gestión de Citas' }, // EN ESPAÑOL
-    { name: 'Agendar Cita', path: '/agendar-cita', icon: CalendarPlus }, // EN ESPAÑOL
-    { name: 'Historial de Citas', path: '/historial-citas', icon: History }, // EN ESPAÑOL
-    { section: 'Gestión de Usuarios' }, // EN ESPAÑOL
-    { name: 'Clientes', path: '/admin/clientes', icon: Users }, // EN ESPAÑOL
-    { name: 'Empleados', path: '/admin/empleados', icon: UserCog }, // EN ESPAÑOL
-    { section: 'Configuración' }, // EN ESPAÑOL
-    { name: 'Servicios', path: '/admin/servicios', icon: Settings }, // EN ESPAÑOL
-    { name: 'Cerrar Sesión', path: '/logout', icon: LogOut, isLogout: true }, // EN ESPAÑOL
+    { name: 'Dashboard', path: '/dashboard', icon: Home },
+    { name: 'Mis Citas', path: '/mis-citas', icon: CalendarCheck },
+    { section: 'Gestión de Citas' },
+    { name: 'Agendar Cita', path: '/agendar-cita', icon: CalendarPlus },
+    { name: 'Historial de Citas', path: '/historial-citas', icon: History },
+    { section: 'Gestión de Usuarios' },
+    { name: 'Clientes', path: '/admin/clientes', icon: Users },
+    { name: 'Empleados', path: '/admin/empleados', icon: UserCog },
+    { section: 'Configuración' },
+    { name: 'Servicios', path: '/admin/servicios', icon: Settings },
+    { name: 'Cerrar Sesión', path: '/logout', icon: LogOut, isLogout: true },
   ];
 
   return (
     <div className="bg-pink-700 text-white w-64 flex flex-col shadow-lg z-10">
       <div className="flex items-center justify-center p-6 border-b border-pink-600">
-        <img src="/monarcaLogo.png" alt="Monarca Logo" className="h-20 w-auto object-contain" />
+        <img src={MonarcaLogo} alt="Monarca Logo" className="h-20 w-auto object-contain" />
       </div>
 
-      <nav className="flex-grow p-4"> 
+      <nav className="flex-grow p-4">
         <ul>
           {navItems.map((item, index) => (
             item.section ? (
@@ -47,11 +48,11 @@ const Sidebar = () => {
                   <button
                     onClick={() => {
                       localStorage.removeItem('isAuthenticated');
-                      window.location.href = '/login'; 
+                      window.location.href = '/login';
                     }}
                     className="flex items-center w-full py-2 px-4 rounded-lg transition duration-200 hover:bg-red-600 text-white"
                   >
-                    <item.icon className="h-5 w-5 mr-3" /> 
+                    <item.icon className="h-5 w-5 mr-3" />
                     <span>{item.name}</span>
                   </button>
                 ) : (
