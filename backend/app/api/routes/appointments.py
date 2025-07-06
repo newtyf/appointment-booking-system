@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.api.dependencies.deps import check_user_role, get_user_service, get_appointment_service
+from app.api.dependencies.deps import check_user_role, get_appointment_service
 from app.schemas.appointment import AppointmentCreate, AppointmentUpdate, AppointmentInDB
 from app.services import AppointmentService
 
@@ -45,7 +45,7 @@ async def update_appointment(
     appointment_id: int,
     appointment_update: AppointmentUpdate,
     appointment_service: Annotated[AppointmentService, Depends(get_appointment_service)],
-    _: Annotated[bool, Depends(check_user_role("admin", "user"))]
+    _: Annotated[bool, Depends(check_user_role("admin"))]
 ):
     appointment = await appointment_service.get_appointment(appointment_id)
     if not appointment:
