@@ -14,7 +14,7 @@ const Login = () => {
     e.preventDefault();
     setError(''); 
 
-    const MOCK_USERNAME = 'nomecaesnewtfy'; 
+    const MOCK_USERNAME = 'tequieromucho'; 
     const MOCK_PASSWORD = '123'; 
 
     if (username === MOCK_USERNAME && password === MOCK_PASSWORD) {
