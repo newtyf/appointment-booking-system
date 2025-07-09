@@ -12,6 +12,11 @@ class AppointmentService:
         appointments = result.scalars().all()
         return appointments
 
+    async def list_user_appointments(self):
+        result = await self.db.execute(select(Appointment))
+        appointments = result.scalars().all()
+        return appointments
+
     async def get_appointment(self, appointment_id: int):
         result = await self.db.execute(select(Appointment).where(Appointment.id == appointment_id))
         appointment = result.scalar_one_or_none()

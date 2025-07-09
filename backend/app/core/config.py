@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "test" # Clave secreta para JWT
     ALGORITHM: str = "HS256" # Algoritmo de JWT
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30 # Tiempo de expiración del token de acceso
+    REPLICATE_API_TOKEN: str = ""
 
     model_config = SettingsConfigDict(
         env_file=".env",

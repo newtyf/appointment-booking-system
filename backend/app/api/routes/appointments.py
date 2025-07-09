@@ -8,10 +8,18 @@ from app.services import AppointmentService
 
 router = APIRouter(prefix="/appointments", tags=["appointments"])
 
-@router.get("/", response_model=list[AppointmentInDB])
+@router.get("", response_model=list[AppointmentInDB])
 async def list_appointments(
     appointment_service: Annotated[AppointmentService, Depends(get_appointment_service)],
-    _: Annotated[bool, Depends(check_user_role("admin", "user"))]
+    _: Annotated[bool, Depends(check_user_role("admin"))]
+):
+    appointments = await appointment_service.list_appointments()
+    return appointments
+
+@router.get("", response_model=list[AppointmentInDB])
+async def list_user_appointments(
+    appointment_service: Annotated[AppointmentService, Depends(get_appointment_service)],
+    _: Annotated[bool, Depends(check_user_role("user"))]
 ):
     appointments = await appointment_service.list_appointments()
     return appointments

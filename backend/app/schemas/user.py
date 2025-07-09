@@ -7,6 +7,7 @@ class UserBase(BaseModel):
     phone: str
 
 class UserCreate(UserBase):
+    role: str | None = None
     password: str
 
 class UserUpdate(BaseModel):
