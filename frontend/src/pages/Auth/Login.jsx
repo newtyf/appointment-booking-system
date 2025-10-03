@@ -26,7 +26,7 @@ const Login = () => {
       const { access_token, token_type } = response.data;
 
       // Almacena el token y el tipo de token
-      localStorage.setItem('accessToken', access_token);
+      localStorage.setItem('access_token', access_token);
       localStorage.setItem('tokenType', token_type);
       localStorage.setItem('isAuthenticated', 'true'); // Marca como autenticado
 
@@ -55,7 +55,7 @@ const Login = () => {
       <div className="bg-white p-10 rounded-lg shadow-2xl w-full max-w-xl mx-4 md:mx-auto flex flex-col md:flex-row items-center md:space-x-12">
         <div className="mb-8 md:mb-0">
           <img
-            src={MonarcaLogo} // <-- Usando la variable importada
+            src={MonarcaLogo} 
             alt="Monarca Logo"
             className="w-64 h-64 object-contain"
           />

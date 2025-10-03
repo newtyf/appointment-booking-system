@@ -11,9 +11,9 @@ const ScheduleAppointment = () => {
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
   
- 
-  const currentUserId = 1; 
-  const currentStylistId = 1; 
+  // TODO: Obtener estos valores del usuario logueado
+  const currentUserId = 1; // Reemplazar con el ID del usuario actual
+  const currentStylistId = 1; // Reemplazar con el ID del estilista seleccionado
 
   const [formData, setFormData] = useState({
     client_id: currentUserId,

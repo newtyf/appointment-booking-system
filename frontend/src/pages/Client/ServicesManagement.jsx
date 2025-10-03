@@ -1,5 +1,6 @@
 import { Search, Eye, Edit, Trash } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import serviceService from "../../services/serviceService";
 
 const ServicesManagement = () => {
   const [modalTipo, setModalTipo] = useState(null);
@@ -14,45 +15,124 @@ const ServicesManagement = () => {
   const [nuevaDescripcion, setNuevaDescripcion] = useState("");
 
   const [filtroBusqueda, setFiltroBusqueda] = useState("");
+  const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  const [services, setServices] = useState([
-    {
-      id: 101,
-      nombre: "Corte de Cabello Hombre",
-      duracion_min: 30,
-      descripcion: "Corte de cabello masculino con lavado incluido.",
-    },
-    {
-      id: 102,
-      nombre: "Corte de Cabello Mujer",
-      duracion_min: 45,
-      descripcion: "Corte, lavado y secado de cabello femenino.",
-    },
-    {
-      id: 103,
-      nombre: "Manicura Clásica",
-      duracion_min: 60,
-      descripcion: "Limpieza, limado, pulido y esmaltado de uñas de las manos.",
-    },
-    {
-      id: 104,
-      nombre: "Pedicura Spa",
-      duracion_min: 90,
-      descripcion: "Pedicura completa con exfoliación, masaje y mascarilla.",
-    },
-    {
-      id: 105,
-      nombre: "Tinte de Cabello",
-      duracion_min: 120,
-      descripcion: "Aplicación de tinte completo o retoque de raíz.",
-    },
-  ]);
+  
+  useEffect(() => {
+    loadServices();
+  }, []);
+
+  const loadServices = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await serviceService.listServices();
+      setServices(data);
+    } catch (err) {
+      console.error('Error al cargar servicios:', err);
+      setError('Error al cargar servicios. Por favor, intenta de nuevo.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAgregarServicio = async () => {
+    if (!nuevoNombre || !nuevaDuracion || !nuevaDescripcion) {
+      alert('Por favor completa todos los campos');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const nuevoServicio = {
+        name: nuevoNombre,
+        duration_min: parseInt(nuevaDuracion),
+        description: nuevaDescripcion,
+      };
+
+      const servicioCreado = await serviceService.createService(nuevoServicio);
+      setServices((prev) => [...prev, servicioCreado]);
+      setModalTipo(null);
+      
+      // Limpiar formulario
+      setNuevoNombre("");
+      setNuevaDuracion("");
+      setNuevaDescripcion("");
+    } catch (err) {
+      console.error('Error al crear servicio:', err);
+      alert('Error al crear el servicio: ' + (err.response?.data?.detail || err.message));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditarServicio = async () => {
+    if (!nombreEditado || !duracionEditada || !descripcionEditada) {
+      alert('Por favor completa todos los campos');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const servicioActualizado = {
+        name: nombreEditado,
+        duration_min: parseInt(duracionEditada),
+        description: descripcionEditada,
+      };
+
+      const resultado = await serviceService.updateService(
+        servicioSeleccionado.id,
+        servicioActualizado
+      );
+
+      setServices((prev) =>
+        prev.map((servicio) =>
+          servicio.id === servicioSeleccionado.id ? resultado : servicio
+        )
+      );
+
+      setModalTipo(null);
+      setServicioSeleccionado(null);
+    } catch (err) {
+      console.error('Error al actualizar servicio:', err);
+      alert('Error al actualizar el servicio: ' + (err.response?.data?.detail || err.message));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEliminarServicio = async () => {
+    try {
+      setLoading(true);
+      await serviceService.deleteService(servicioSeleccionado.id);
+      
+      setServices((prev) =>
+        prev.filter((servicio) => servicio.id !== servicioSeleccionado.id)
+      );
+      
+      setModalTipo(null);
+      setServicioSeleccionado(null);
+    } catch (err) {
+      console.error('Error al eliminar servicio:', err);
+      alert('Error al eliminar el servicio: ' + (err.response?.data?.detail || err.message));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className='container mx-auto bg-white p-8 rounded-lg shadow-md'>
       <h1 className='text-3xl font-bold text-gray-800 mb-6'>
         Gestión de Servicios
       </h1>
+
+      {error && (
+        <div className='bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4'>
+          {error}
+        </div>
+      )}
 
       <div className='flex justify-between items-center mb-6'>
         <div className='relative flex-grow mr-4'>
@@ -73,13 +153,16 @@ const ServicesManagement = () => {
             setNuevaDuracion("");
             setNuevaDescripcion("");
           }}
-          className='bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200'
+          disabled={loading}
+          className='bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200 disabled:bg-gray-400'
         >
           Agregar Servicio
         </button>
       </div>
 
-      {services.length > 0 ? (
+      {loading && services.length === 0 ? (
+        <p className='text-center text-gray-600 py-4'>Cargando servicios...</p>
+      ) : services.length > 0 ? (
         <div className='overflow-x-auto'>
           <table className='min-w-full bg-white border border-gray-200 rounded-lg'>
             <thead>
@@ -105,8 +188,8 @@ const ServicesManagement = () => {
               {services
                 .filter(
                   (s) =>
-                    s.nombre.toLowerCase().includes(filtroBusqueda) ||
-                    s.descripcion.toLowerCase().includes(filtroBusqueda)
+                    s.name.toLowerCase().includes(filtroBusqueda) ||
+                    s.description.toLowerCase().includes(filtroBusqueda)
                 )
                 .map((service) => (
                   <tr key={service.id} className='hover:bg-gray-50'>
@@ -114,13 +197,13 @@ const ServicesManagement = () => {
                       {service.id}
                     </td>
                     <td className='py-3 px-4 border-b border-gray-200 text-gray-700'>
-                      {service.nombre}
+                      {service.name}
                     </td>
                     <td className='py-3 px-4 border-b border-gray-200 text-gray-700'>
-                      {service.duracion_min}
+                      {service.duration_min}
                     </td>
                     <td className='py-3 px-4 border-b border-gray-200 text-gray-700'>
-                      {service.descripcion}
+                      {service.description}
                     </td>
                     <td className='py-3 px-4 border-b border-gray-200 text-center text-sm font-medium whitespace-nowrap'>
                       <button
@@ -136,9 +219,9 @@ const ServicesManagement = () => {
                         onClick={() => {
                           setModalTipo("editar");
                           setServicioSeleccionado(service);
-                          setNombreEditado(service.nombre);
-                          setDuracionEditada(service.duracion_min);
-                          setDescripcionEditada(service.descripcion);
+                          setNombreEditado(service.name);
+                          setDuracionEditada(service.duration_min);
+                          setDescripcionEditada(service.description);
                         }}
                         className='text-purple-600 hover:text-purple-900 mx-1'
                       >
@@ -168,20 +251,10 @@ const ServicesManagement = () => {
         <div className='fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50'>
           <div className='bg-white p-6 rounded-lg w-full max-w-md shadow-xl'>
             <h2 className='text-xl font-bold mb-4'>Detalles del Servicio</h2>
-
-            <p>
-              <strong>ID:</strong> {servicioSeleccionado.id}
-            </p>
-            <p>
-              <strong>Nombre:</strong> {servicioSeleccionado.nombre}
-            </p>
-            <p>
-              <strong>Duración:</strong> {servicioSeleccionado.duracion_min} min
-            </p>
-            <p>
-              <strong>Descripción:</strong> {servicioSeleccionado.descripcion}
-            </p>
-
+            <p><strong>ID:</strong> {servicioSeleccionado.id}</p>
+            <p><strong>Nombre:</strong> {servicioSeleccionado.name}</p>
+            <p><strong>Duración:</strong> {servicioSeleccionado.duration_min} min</p>
+            <p><strong>Descripción:</strong> {servicioSeleccionado.description}</p>
             <div className='mt-6 text-right'>
               <button
                 onClick={() => {
@@ -200,11 +273,8 @@ const ServicesManagement = () => {
         <div className='fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50'>
           <div className='bg-white p-6 rounded-lg w-full max-w-md shadow-xl'>
             <h2 className='text-xl font-bold mb-4'>Editar Servicio</h2>
-
             <div className='mb-4'>
-              <label className='block text-gray-700 font-medium mb-2'>
-                Nombre
-              </label>
+              <label className='block text-gray-700 font-medium mb-2'>Nombre</label>
               <input
                 value={nombreEditado}
                 onChange={(e) => setNombreEditado(e.target.value)}
@@ -213,9 +283,7 @@ const ServicesManagement = () => {
             </div>
 
             <div className='mb-4'>
-              <label className='block text-gray-700 font-medium mb-2'>
-                Duración (min)
-              </label>
+              <label className='block text-gray-700 font-medium mb-2'>Duración (min)</label>
               <input
                 type='number'
                 value={duracionEditada}
@@ -225,9 +293,7 @@ const ServicesManagement = () => {
             </div>
 
             <div className='mb-4'>
-              <label className='block text-gray-700 font-medium mb-2'>
-                Descripción
-              </label>
+              <label className='block text-gray-700 font-medium mb-2'>Descripción</label>
               <textarea
                 value={descripcionEditada}
                 onChange={(e) => setDescripcionEditada(e.target.value)}
@@ -241,34 +307,17 @@ const ServicesManagement = () => {
                   setModalTipo(null);
                   setServicioSeleccionado(null);
                 }}
-                className='px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500'
+                disabled={loading}
+                className='px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500 disabled:bg-gray-300'
               >
                 Cancelar
               </button>
-
               <button
-                onClick={() => {
-                  // Actualizar el array de servicios
-                  setServices((prev) =>
-                    prev.map((servicio) =>
-                      servicio.id === servicioSeleccionado.id
-                        ? {
-                            ...servicio,
-                            nombre: nombreEditado,
-                            duracion_min: duracionEditada,
-                            descripcion: descripcionEditada,
-                          }
-                        : servicio
-                    )
-                  );
-
-                  // Cerrar el modal
-                  setModalTipo(null);
-                  setServicioSeleccionado(null);
-                }}
-                className='bg-pink-600 text-white px-4 py-2 rounded hover:bg-pink-700'
+                onClick={handleEditarServicio}
+                disabled={loading}
+                className='bg-pink-600 text-white px-4 py-2 rounded hover:bg-pink-700 disabled:bg-gray-400'
               >
-                Guardar Cambios
+                {loading ? 'Guardando...' : 'Guardar Cambios'}
               </button>
             </div>
           </div>
@@ -281,31 +330,23 @@ const ServicesManagement = () => {
             <h2 className='text-xl font-bold mb-4'>¿Eliminar Servicio?</h2>
             <p>
               ¿Estás seguro de que deseas eliminar{" "}
-              <strong>{servicioSeleccionado.nombre}</strong>?
+              <strong>{servicioSeleccionado.name}</strong>?
             </p>
 
             <div className='flex justify-end space-x-2 mt-6'>
               <button
                 className='bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500'
-                onClick={() => {
-                  setModalTipo(null);
-                }}
+                onClick={() => setModalTipo(null)}
+                disabled={loading}
               >
                 Cancelar
               </button>
               <button
-                className='bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700'
-                onClick={() => {
-                  setServices((prev) =>
-                    prev.filter(
-                      (servicio) => servicio.id !== servicioSeleccionado.id
-                    )
-                  );
-                  setModalTipo(null);
-                  setServicioSeleccionado(null);
-                }}
+                className='bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 disabled:bg-gray-400'
+                onClick={handleEliminarServicio}
+                disabled={loading}
               >
-                Eliminar
+                {loading ? 'Eliminando...' : 'Eliminar'}
               </button>
             </div>
           </div>
@@ -317,65 +358,51 @@ const ServicesManagement = () => {
             <h2 className='text-xl font-bold mb-4'>Agregar Servicio</h2>
 
             <div className='mb-4'>
-              <label className='block text-gray-700 font-medium mb-2'>
-                Nombre
-              </label>
+              <label className='block text-gray-700 font-medium mb-2'>Nombre</label>
               <input
                 value={nuevoNombre}
                 onChange={(e) => setNuevoNombre(e.target.value)}
                 className='w-full px-4 py-2 border rounded'
+                placeholder='Ej: Corte de cabello'
               />
             </div>
 
             <div className='mb-4'>
-              <label className='block text-gray-700 font-medium mb-2'>
-                Duración (min)
-              </label>
+              <label className='block text-gray-700 font-medium mb-2'>Duración (min)</label>
               <input
                 type='number'
                 value={nuevaDuracion}
                 onChange={(e) => setNuevaDuracion(e.target.value)}
                 className='w-full px-4 py-2 border rounded'
+                placeholder='Ej: 30'
               />
             </div>
 
             <div className='mb-4'>
-              <label className='block text-gray-700 font-medium mb-2'>
-                Descripción
-              </label>
+              <label className='block text-gray-700 font-medium mb-2'>Descripción</label>
               <textarea
                 value={nuevaDescripcion}
                 onChange={(e) => setNuevaDescripcion(e.target.value)}
                 className='w-full px-4 py-2 border rounded'
+                placeholder='Describe el servicio...'
               />
             </div>
 
             <div className='mt-6 text-right flex gap-3 justify-end'>
               <button
                 onClick={() => setModalTipo(null)}
-                className='px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500'
+                disabled={loading}
+                className='px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500 disabled:bg-gray-300'
               >
                 Cancelar
               </button>
 
               <button
-                onClick={() => {
-                  const nuevoServicio = {
-                    id:
-                      services.length > 0
-                        ? services[services.length - 1].id + 1
-                        : 1,
-                    nombre: nuevoNombre,
-                    duracion_min: parseInt(nuevaDuracion),
-                    descripcion: nuevaDescripcion,
-                  };
-
-                  setServices((prev) => [...prev, nuevoServicio]);
-                  setModalTipo(null);
-                }}
-                className='bg-pink-600 text-white px-4 py-2 rounded hover:bg-pink-700'
+                onClick={handleAgregarServicio}
+                disabled={loading}
+                className='bg-pink-600 text-white px-4 py-2 rounded hover:bg-pink-700 disabled:bg-gray-400'
               >
-                Guardar
+                {loading ? 'Guardando...' : 'Guardar'}
               </button>
             </div>
           </div>
