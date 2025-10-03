@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import Button from '../../components/Button'; 
+import Button from '../../components/Button';
 import MonarcaLogo from '../../assets/monarcaLogo.png';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState(''); 
+  const [success, setSuccess] = useState('');
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -55,13 +55,24 @@ const Login = () => {
       <div className="bg-white p-10 rounded-lg shadow-2xl w-full max-w-xl mx-4 md:mx-auto flex flex-col md:flex-row items-center md:space-x-12">
         <div className="mb-8 md:mb-0">
           <img
-            src={MonarcaLogo} 
+            src={MonarcaLogo}
             alt="Monarca Logo"
             className="w-64 h-64 object-contain"
           />
         </div>
 
         <div className="w-full md:w-auto flex-grow">
+
+          <Link
+            to="/"
+            className="inline-flex items-center text-pink-600 hover:text-pink-700 mb-4"
+          >
+            <svg className="h-5 w-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Volver al inicio
+          </Link>
+
           <div className="flex flex-col items-center mb-8">
             <h2 className="text-4xl font-extrabold text-gray-900 mb-2 text-center">Iniciar Sesión</h2>
             <p className="text-base text-gray-600 text-center">Bienvenido de nuevo</p>

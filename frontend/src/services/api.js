@@ -2,7 +2,6 @@
 import axios from 'axios';
 
 // Configuración base de la API
-// Usa /api para aprovechar el proxy de Vite configurado en vite.config.js
 const API_BASE_URL = '/api';
 
 // Crear instancia de axios
