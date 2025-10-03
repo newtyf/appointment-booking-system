@@ -34,7 +34,7 @@ async def get_service(
 async def create_service(
     service_create: ServiceCreate,
     service_service: Annotated[ServiceService, Depends(get_service_service)],
-    _: Annotated[bool, Depends(check_user_role("admin"))]
+    _: Annotated[bool, Depends(check_user_role("admin", "user"))]
 ):
     return await service_service.create_service(service_create)
 
@@ -44,7 +44,7 @@ async def update_service(
     service_id: int,
     service_update: ServiceUpdate,
     service_service: Annotated[ServiceService, Depends(get_service_service)],
-    _: Annotated[bool, Depends(check_user_role("admin"))]
+    _: Annotated[bool, Depends(check_user_role("admin", "user"))]
 ):
     service = await service_service.update_service(service_id, service_update)
     if not service:
@@ -56,7 +56,7 @@ async def update_service(
 async def delete_service(
     service_id: int,
     service_service: Annotated[ServiceService, Depends(get_service_service)],
-    _: Annotated[bool, Depends(check_user_role("admin"))]
+    _: Annotated[bool, Depends(check_user_role("admin", "user"))]
 ):
     service = await service_service.delete_service(service_id)
     if not service:

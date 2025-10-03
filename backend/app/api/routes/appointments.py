@@ -11,18 +11,18 @@ router = APIRouter(prefix="/appointments", tags=["appointments"])
 @router.get("", response_model=list[AppointmentInDB])
 async def list_appointments(
     appointment_service: Annotated[AppointmentService, Depends(get_appointment_service)],
-    _: Annotated[bool, Depends(check_user_role("admin"))]
+    _: Annotated[bool, Depends(check_user_role("admin", "user"))]
 ):
     appointments = await appointment_service.list_appointments()
     return appointments
 
-@router.get("", response_model=list[AppointmentInDB])
-async def list_user_appointments(
-    appointment_service: Annotated[AppointmentService, Depends(get_appointment_service)],
-    _: Annotated[bool, Depends(check_user_role("user"))]
-):
-    appointments = await appointment_service.list_appointments()
-    return appointments
+#@router.get("", response_model=list[AppointmentInDB])
+#async def list_user_appointments(
+#    appointment_service: Annotated[AppointmentService, Depends(get_appointment_service)],
+#    _: Annotated[bool, Depends(check_user_role("user"))]
+#):
+#    appointments = await appointment_service.list_appointments()
+#    return appointments
 
 
 @router.get("/{appointment_id}", response_model=AppointmentInDB)
@@ -53,7 +53,7 @@ async def update_appointment(
     appointment_id: int,
     appointment_update: AppointmentUpdate,
     appointment_service: Annotated[AppointmentService, Depends(get_appointment_service)],
-    _: Annotated[bool, Depends(check_user_role("admin"))]
+    _: Annotated[bool, Depends(check_user_role("admin", "user"))]
 ):
     appointment = await appointment_service.get_appointment(appointment_id)
     if not appointment:
