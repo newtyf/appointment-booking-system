@@ -1,430 +1,392 @@
 import React from "react";
-import { Search, Eye, Edit, Trash } from "lucide-react";
+import { Search, Eye, Trash, Briefcase, Loader, Plus } from "lucide-react";
+import userService from '../../services/userService';
 
-const UsersManagement = () => {
-  const [modalTipo, setModalTipo] = React.useState(null); // 'ver', 'editar', 'eliminar'
+const EmpleadosManagement = () => {
+  const [modalTipo, setModalTipo] = React.useState(null);
   const [filtroBusqueda, setFiltroBusqueda] = React.useState("");
-  const [modalEditar, setModalEditar] = React.useState(false);
-  const [usuarioSeleccionado, setUsuarioSeleccionado] = React.useState(null);
-  const [nombreEditado, setNombreEditado] = React.useState("");
-  const [correoEditado, setCorreoEditado] = React.useState("");
-  const [telefonoEditado, setTelefonoEditado] = React.useState("");
-  const [rolEditado, setRolEditado] = React.useState("");
+  const [empleadoSeleccionado, setEmpleadoSeleccionado] = React.useState(null);
   const [modalAgregar, setModalAgregar] = React.useState(false);
   const [nuevoNombre, setNuevoNombre] = React.useState("");
+  const [nuevoApellido, setNuevoApellido] = React.useState("");
   const [nuevoCorreo, setNuevoCorreo] = React.useState("");
   const [nuevoTelefono, setNuevoTelefono] = React.useState("");
-  const [nuevoRol, setNuevoRol] = React.useState("");
+  const [nuevoRol, setNuevoRol] = React.useState("user");
+  const [nuevoPassword, setNuevoPassword] = React.useState("");
+  const [empleados, setEmpleados] = React.useState([]);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState(null);
+  const [procesando, setProcesando] = React.useState(false);
 
-  const [users, setUsers] = React.useState([
-    {
-      id: 1,
-      nombre: "Juan Pérez",
-      correo: "juan.perez@example.com",
-      telefono: "987654321",
-      rol: "Administrador",
-      creado_en: "2024-01-15 10:30:00",
-      actualizado_en: "2024-06-20 14:00:00",
-    },
-    {
-      id: 2,
-      nombre: "María García",
-      correo: "maria.garcia@example.com",
-      telefono: "912345678",
-      rol: "Estilista",
-      creado_en: "2024-02-01 09:00:00",
-      actualizado_en: "2024-07-01 11:15:00",
-    },
-    {
-      id: 3,
-      nombre: "Carlos Ruiz",
-      correo: "carlos.ruiz@example.com",
-      telefono: "934567890",
-      rol: "Cliente",
-      creado_en: "2024-03-10 16:45:00",
-      actualizado_en: "2024-03-10 16:45:00",
-    },
-    {
-      id: 4,
-      nombre: "Ana López",
-      correo: "ana.lopez@example.com",
-      telefono: "956789012",
-      rol: "Cliente",
-      creado_en: "2024-04-05 11:00:00",
-      actualizado_en: "2024-05-20 10:00:00",
-    },
-  ]);
+  const roles = [
+    "admin",
+    "user",
+    "Estilista Senior",
+    "Estilista Junior",
+    "Barbero",
+    "Manicurista",
+    "Maquillador(a)",
+    "Recepcionista",
+  ];
+
+  const handleAgregarEmpleado = async () => {
+    if (!nuevoNombre || !nuevoApellido || !nuevoCorreo || !nuevoPassword) {
+      alert("Por favor completa todos los campos obligatorios (Nombre, Apellido, Correo y Contraseña)");
+      return;
+    }
+
+    try {
+      setProcesando(true);
+      const nuevoEmpleado = {
+        nombre: nuevoNombre,
+        apellido: nuevoApellido,
+        email: nuevoCorreo,
+        telefono: nuevoTelefono || "",
+        rol: nuevoRol,
+        password: nuevoPassword,
+      };
+
+      const empleadoCreado = await userService.createUser(nuevoEmpleado);
+      
+      // Agregar a la lista local
+      setEmpleados([empleadoCreado, ...empleados]);
+
+      // Limpiar formulario y cerrar modal
+      setModalAgregar(false);
+      setNuevoNombre("");
+      setNuevoApellido("");
+      setNuevoCorreo("");
+      setNuevoTelefono("");
+      setNuevoRol("user");
+      setNuevoPassword("");
+
+      alert("Empleado agregado exitosamente");
+    } catch (err) {
+      const errorMsg = err.response?.data?.detail || err.message;
+      alert("Error al agregar empleado: " + errorMsg);
+      console.error("Error al agregar:", err);
+    } finally {
+      setProcesando(false);
+    }
+  };
+
+  const handleVerDetalles = async (empleado) => {
+    try {
+      setProcesando(true);
+      // Obtener detalles completos del usuario
+      const detalles = await userService.getUser(empleado.id);
+      setEmpleadoSeleccionado(detalles);
+      setModalTipo("ver");
+    } catch (err) {
+      const errorMsg = err.response?.data?.detail || err.message;
+      alert("Error al cargar detalles: " + errorMsg);
+      console.error("Error:", err);
+    } finally {
+      setProcesando(false);
+    }
+  };
+
+  const empleadosFiltrados = empleados.filter(
+    (e) =>
+      e.nombre?.toLowerCase().includes(filtroBusqueda) ||
+      e.apellido?.toLowerCase().includes(filtroBusqueda) ||
+      e.email?.toLowerCase().includes(filtroBusqueda) ||
+      e.rol?.toLowerCase().includes(filtroBusqueda)
+  );
+
+  if (loading) {
+    return (
+      <div className="container mx-auto bg-white p-8 rounded-lg shadow-md">
+        <div className="flex items-center justify-center h-64">
+          <Loader className="h-8 w-8 animate-spin text-pink-600" />
+          <span className="ml-3 text-gray-600">Cargando empleados...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className='container mx-auto bg-white p-8 rounded-lg shadow-md'>
-      <h1 className='text-3xl font-bold text-gray-800 mb-6'>
-        Gestión de Usuarios
-      </h1>
+    <div className="container mx-auto bg-white p-8 rounded-lg shadow-md">
+      <div className="flex items-center gap-3 mb-6">
+        <Briefcase className="h-8 w-8 text-pink-600" />
+        <h1 className="text-3xl font-bold text-gray-800">
+          Gestión de Empleados
+        </h1>
+      </div>
 
-      <div className='flex justify-between items-center mb-6'>
-        <div className='relative flex-grow mr-4'>
+      <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded mb-4">
+        <p className="text-sm">
+          ℹ️ <strong>Nota:</strong> En esta versión solo puedes crear y ver empleados. 
+          Las funciones de editar y eliminar requieren actualización del backend.
+        </p>
+      </div>
+
+      <div className="flex justify-between items-center mb-6">
+        <div className="relative flex-grow mr-4">
           <input
-            type='text'
-            placeholder='Buscar por nombre, correo o teléfono...'
+            type="text"
+            placeholder="Buscar por nombre, apellido, correo o rol..."
             value={filtroBusqueda}
             onChange={(e) => setFiltroBusqueda(e.target.value.toLowerCase())}
-            className='pl-10 pr-4 py-2 border rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-pink-500'
+            className="pl-10 pr-4 py-2 border rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-pink-500"
           />
-
-          <Search className='h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2' />
+          <Search className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
         </div>
         <button
-          className='bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200'
+          className="bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200 flex items-center gap-2"
           onClick={() => setModalAgregar(true)}
         >
-          Agregar Usuario
+          <Plus className="h-5 w-5" />
+          Agregar Empleado
         </button>
       </div>
 
-      {users.length > 0 ? (
-        <div className='overflow-x-auto'>
-          <table className='min-w-full bg-white border border-gray-200 rounded-lg'>
+      {empleadosFiltrados.length > 0 ? (
+        <div className="overflow-x-auto">
+          <table className="min-w-full bg-white border border-gray-200 rounded-lg">
             <thead>
               <tr>
-                <th className='py-3 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                <th className="py-3 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   ID
                 </th>
-                <th className='py-3 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                  Nombre
+                <th className="py-3 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Nombre Completo
                 </th>
-                <th className='py-3 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                <th className="py-3 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Correo
                 </th>
-                <th className='py-3 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                <th className="py-3 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Teléfono
                 </th>
-                <th className='py-3 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                <th className="py-3 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Rol
                 </th>
-                <th className='py-3 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                  Creado En
-                </th>
-                <th className='py-3 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                  Actualizado En
-                </th>
-                <th className='py-3 px-4 border-b border-gray-200 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                <th className="py-3 px-4 border-b border-gray-200 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Acciones
                 </th>
               </tr>
             </thead>
             <tbody>
-              {users
-                .filter(
-                  (u) =>
-                    u.nombre.toLowerCase().includes(filtroBusqueda) ||
-                    u.correo.toLowerCase().includes(filtroBusqueda) ||
-                    u.telefono.includes(filtroBusqueda)
-                )
-                .map((user) => (
-                  <tr key={user.id} className='hover:bg-gray-50'>
-                    <td className='py-3 px-4 border-b border-gray-200 text-gray-700'>
-                      {user.id}
-                    </td>
-                    <td className='py-3 px-4 border-b border-gray-200 text-gray-700'>
-                      {user.nombre}
-                    </td>
-                    <td className='py-3 px-4 border-b border-gray-200 text-gray-700'>
-                      {user.correo}
-                    </td>
-                    <td className='py-3 px-4 border-b border-gray-200 text-gray-700'>
-                      {user.telefono}
-                    </td>
-                    <td className='py-3 px-4 border-b border-gray-200 text-gray-700'>
-                      {user.rol}
-                    </td>
-                    <td className='py-3 px-4 border-b border-gray-200 text-gray-700'>
-                      {new Date(user.creado_en).toLocaleDateString()} <br />
-                      <span className='text-sm text-gray-500'>
-                        {new Date(user.creado_en).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </span>
-                    </td>
-                    <td className='py-3 px-4 border-b border-gray-200 text-gray-700'>
-                      {new Date(user.actualizado_en).toLocaleDateString()}{" "}
-                      <br />
-                      <span className='text-sm text-gray-500'>
-                        {new Date(user.actualizado_en).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </span>
-                    </td>
-                    <td className='py-3 px-4 border-b border-gray-200 text-center text-sm font-medium whitespace-nowrap'>
-                      <button
-                        onClick={() => {
-                          setModalTipo("ver");
-                          setUsuarioSeleccionado(user);
-                        }}
-                        className='text-blue-600 hover:text-blue-900 mx-1'
-                      >
-                        <Eye className='h-5 w-5' />
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          setUsuarioSeleccionado(user);
-                          setNombreEditado(user.nombre);
-                          setCorreoEditado(user.correo);
-                          setTelefonoEditado(user.telefono);
-                          setRolEditado(user.rol);
-                          setModalEditar(true);
-                        }}
-                        className='text-purple-600 hover:text-purple-900 mx-1'
-                      >
-                        <Edit className='h-5 w-5' />
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          setUsuarioSeleccionado(user);
-                          setModalTipo("eliminar");
-                        }}
-                        className='text-red-600 hover:text-red-900 mx-1'
-                      >
-                        <Trash className='h-5 w-5' />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+              {empleadosFiltrados.map((empleado) => (
+                <tr key={empleado.id} className="hover:bg-gray-50">
+                  <td className="py-3 px-4 border-b border-gray-200 text-gray-700">
+                    {empleado.id}
+                  </td>
+                  <td className="py-3 px-4 border-b border-gray-200 text-gray-700">
+                    {empleado.nombre} {empleado.apellido}
+                  </td>
+                  <td className="py-3 px-4 border-b border-gray-200 text-gray-700">
+                    {empleado.email}
+                  </td>
+                  <td className="py-3 px-4 border-b border-gray-200 text-gray-700">
+                    {empleado.telefono || "N/A"}
+                  </td>
+                  <td className="py-3 px-4 border-b border-gray-200 text-gray-700">
+                    <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-semibold">
+                      {empleado.rol}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 border-b border-gray-200 text-center text-sm font-medium whitespace-nowrap">
+                    <button
+                      onClick={() => handleVerDetalles(empleado)}
+                      className="text-blue-600 hover:text-blue-900 mx-1"
+                      title="Ver detalles"
+                      disabled={procesando}
+                    >
+                      <Eye className="h-5 w-5" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
       ) : (
-        <p className='text-gray-600'>
-          No hay usuarios registrados por el momento.
-        </p>
+        <div className="text-center py-12 bg-gray-50 rounded-lg">
+          <Briefcase className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-600 text-lg mb-2">
+            {filtroBusqueda ? "No se encontraron empleados con ese criterio" : "No hay empleados registrados"}
+          </p>
+          {!filtroBusqueda && (
+            <button
+              onClick={() => setModalAgregar(true)}
+              className="mt-4 bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 px-6 rounded-lg transition duration-200"
+            >
+              Agregar Primer Empleado
+            </button>
+          )}
+        </div>
       )}
 
-      {modalEditar && usuarioSeleccionado && (
-        <div className='fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50'>
-          <div className='bg-white p-6 rounded-lg w-full max-w-md shadow-xl'>
-            <h2 className='text-xl font-bold mb-4'>Editar Usuario</h2>
+      {modalAgregar && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg w-full max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto">
+            <h2 className="text-xl font-bold mb-4">Agregar Nuevo Empleado</h2>
 
-            <label className='block mb-2 font-medium'>Nombre</label>
-            <input
-              className='w-full mb-4 border px-3 py-2 rounded'
-              value={nombreEditado}
-              onChange={(e) => setNombreEditado(e.target.value)}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block mb-2 font-medium">
+                  Nombre <span className="text-red-500">*</span>
+                </label>
+                <input
+                  className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-pink-500"
+                  value={nuevoNombre}
+                  onChange={(e) => setNuevoNombre(e.target.value)}
+                  placeholder="Ej: María"
+                />
+              </div>
 
-            <label className='block mb-2 font-medium'>Correo</label>
-            <input
-              className='w-full mb-4 border px-3 py-2 rounded'
-              value={correoEditado}
-              onChange={(e) => setCorreoEditado(e.target.value)}
-            />
+              <div>
+                <label className="block mb-2 font-medium">
+                  Apellido <span className="text-red-500">*</span>
+                </label>
+                <input
+                  className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-pink-500"
+                  value={nuevoApellido}
+                  onChange={(e) => setNuevoApellido(e.target.value)}
+                  placeholder="Ej: González"
+                />
+              </div>
 
-            <label className='block mb-2 font-medium'>Teléfono</label>
-            <input
-              className='w-full mb-4 border px-3 py-2 rounded'
-              value={telefonoEditado}
-              onChange={(e) => setTelefonoEditado(e.target.value)}
-            />
+              <div>
+                <label className="block mb-2 font-medium">
+                  Correo <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-pink-500"
+                  value={nuevoCorreo}
+                  onChange={(e) => setNuevoCorreo(e.target.value)}
+                  placeholder="correo@ejemplo.com"
+                />
+              </div>
 
-            <label className='block mb-2 font-medium'>Rol</label>
-            <input
-              className='w-full mb-4 border px-3 py-2 rounded'
-              value={rolEditado}
-              onChange={(e) => setRolEditado(e.target.value)}
-            />
+              <div>
+                <label className="block mb-2 font-medium">
+                  Contraseña <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="password"
+                  className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-pink-500"
+                  value={nuevoPassword}
+                  onChange={(e) => setNuevoPassword(e.target.value)}
+                  placeholder="Mínimo 6 caracteres"
+                />
+              </div>
 
-            <div className='flex justify-end gap-2 mt-6'>
+              <div>
+                <label className="block mb-2 font-medium">Teléfono</label>
+                <input
+                  className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-pink-500"
+                  value={nuevoTelefono}
+                  onChange={(e) => setNuevoTelefono(e.target.value)}
+                  placeholder="987654321"
+                />
+              </div>
+
+              <div>
+                <label className="block mb-2 font-medium">
+                  Rol <span className="text-red-500">*</span>
+                </label>
+                <select
+                  className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-pink-500"
+                  value={nuevoRol}
+                  onChange={(e) => setNuevoRol(e.target.value)}
+                >
+                  {roles.map((rol) => (
+                    <option key={rol} value={rol}>
+                      {rol}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 mt-6">
               <button
                 onClick={() => {
-                  setModalEditar(false);
-                  setUsuarioSeleccionado(null);
+                  setModalAgregar(false);
+                  setNuevoNombre("");
+                  setNuevoApellido("");
+                  setNuevoCorreo("");
+                  setNuevoTelefono("");
+                  setNuevoRol("user");
+                  setNuevoPassword("");
                 }}
-                className='bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500'
+                className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
+                disabled={procesando}
               >
                 Cancelar
               </button>
 
               <button
-                onClick={() => {
-                  // Simular actualización
-                  const actualizado = {
-                    ...usuarioSeleccionado,
-                    nombre: nombreEditado,
-                    correo: correoEditado,
-                    telefono: telefonoEditado,
-                    rol: rolEditado,
-                    actualizado_en: new Date().toISOString(),
-                  };
-
-                  const nuevosUsuarios = users.map((u) =>
-                    u.id === usuarioSeleccionado.id ? actualizado : u
-                  );
-
-                  setUsers(nuevosUsuarios); // 👈 Actualiza el array con cambios
-                  setUsuarioSeleccionado(null);
-                  setModalEditar(false);
-
-                  // Aquí deberías tener setUsers(...) si fuera editable
-                  console.log("Usuario actualizado:", actualizado);
-                }}
-                className='bg-pink-600 text-white px-4 py-2 rounded hover:bg-pink-700'
+                onClick={handleAgregarEmpleado}
+                className="bg-pink-600 text-white px-4 py-2 rounded hover:bg-pink-700 flex items-center gap-2"
+                disabled={procesando}
               >
-                Guardar Cambios
+                {procesando && <Loader className="h-4 w-4 animate-spin" />}
+                {procesando ? "Guardando..." : "Guardar Empleado"}
               </button>
             </div>
           </div>
         </div>
       )}
-      {modalTipo === "ver" && usuarioSeleccionado && (
-        <div className='fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50'>
-          <div className='bg-white p-6 rounded-lg w-full max-w-md shadow-xl'>
-            <h2 className='text-xl font-bold mb-4'>Detalles del Usuario</h2>
 
-            <p>
-              <strong>ID:</strong> {usuarioSeleccionado.id}
-            </p>
-            <p>
-              <strong>Nombre:</strong> {usuarioSeleccionado.nombre}
-            </p>
-            <p>
-              <strong>Correo:</strong> {usuarioSeleccionado.correo}
-            </p>
-            <p>
-              <strong>Teléfono:</strong> {usuarioSeleccionado.telefono}
-            </p>
-            <p>
-              <strong>Rol:</strong> {usuarioSeleccionado.rol}
-            </p>
-            <p>
-              <strong>Creado En:</strong> {usuarioSeleccionado.creado_en}
-            </p>
-            <p>
-              <strong>Actualizado En:</strong>{" "}
-              {usuarioSeleccionado.actualizado_en}
-            </p>
+      {modalTipo === "ver" && empleadoSeleccionado && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg w-full max-w-md shadow-xl">
+            <h2 className="text-xl font-bold mb-4">Detalles del Empleado</h2>
 
-            <div className='mt-6 text-right'>
+            <div className="space-y-3">
+              <p>
+                <strong>ID:</strong> {empleadoSeleccionado.id}
+              </p>
+              <p>
+                <strong>Nombre Completo:</strong> {empleadoSeleccionado.nombre}{" "}
+                {empleadoSeleccionado.apellido}
+              </p>
+              <p>
+                <strong>Correo:</strong> {empleadoSeleccionado.email}
+              </p>
+              <p>
+                <strong>Teléfono:</strong>{" "}
+                {empleadoSeleccionado.telefono || "N/A"}
+              </p>
+              <p>
+                <strong>Rol:</strong>{" "}
+                <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-semibold">
+                  {empleadoSeleccionado.rol}
+                </span>
+              </p>
+              {empleadoSeleccionado.created_at && (
+                <p>
+                  <strong>Creado En:</strong>{" "}
+                  {new Date(empleadoSeleccionado.created_at).toLocaleString('es-PE', {
+                    dateStyle: 'medium',
+                    timeStyle: 'short'
+                  })}
+                </p>
+              )}
+              {empleadoSeleccionado.updated_at && (
+                <p>
+                  <strong>Actualizado En:</strong>{" "}
+                  {new Date(empleadoSeleccionado.updated_at).toLocaleString('es-PE', {
+                    dateStyle: 'medium',
+                    timeStyle: 'short'
+                  })}
+                </p>
+              )}
+            </div>
+
+            <div className="mt-6 text-right">
               <button
                 onClick={() => {
                   setModalTipo(null);
-                  setUsuarioSeleccionado(null);
+                  setEmpleadoSeleccionado(null);
                 }}
-                className='bg-pink-600 text-white px-4 py-2 rounded hover:bg-pink-700'
+                className="bg-pink-600 text-white px-4 py-2 rounded hover:bg-pink-700"
               >
                 Cerrar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      {modalTipo === "eliminar" && usuarioSeleccionado && (
-        <div className='fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50'>
-          <div className='bg-white p-6 rounded-lg w-full max-w-sm shadow-xl'>
-            <h2 className='text-xl font-bold mb-4'>¿Eliminar Usuario?</h2>
-            <p>
-              ¿Estás seguro de que deseas eliminar{" "}
-              <strong>{usuarioSeleccionado.nombre}</strong>?
-            </p>
-
-            <div className='flex justify-end space-x-2 mt-6'>
-              <button
-                className='bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500'
-                onClick={() => {
-                  setModalTipo(null);
-                  setUsuarioSeleccionado(null);
-                }}
-              >
-                Cancelar
-              </button>
-              <button
-                className='bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700'
-                onClick={() => {
-                  setUsers(
-                    users.filter((u) => u.id !== usuarioSeleccionado.id)
-                  );
-                  setModalTipo(null);
-                  setUsuarioSeleccionado(null);
-                }}
-              >
-                Eliminar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      {modalAgregar && (
-        <div className='fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50'>
-          <div className='bg-white p-6 rounded-lg w-full max-w-md shadow-xl'>
-            <h2 className='text-xl font-bold mb-4'>Agregar Nuevo Usuario</h2>
-
-            <label className='block mb-2 font-medium'>Nombre</label>
-            <input
-              className='w-full mb-4 border px-3 py-2 rounded'
-              value={nuevoNombre}
-              onChange={(e) => setNuevoNombre(e.target.value)}
-            />
-
-            <label className='block mb-2 font-medium'>Correo</label>
-            <input
-              className='w-full mb-4 border px-3 py-2 rounded'
-              value={nuevoCorreo}
-              onChange={(e) => setNuevoCorreo(e.target.value)}
-            />
-
-            <label className='block mb-2 font-medium'>Teléfono</label>
-            <input
-              className='w-full mb-4 border px-3 py-2 rounded'
-              value={nuevoTelefono}
-              onChange={(e) => setNuevoTelefono(e.target.value)}
-            />
-
-            <label className='block mb-2 font-medium'>Rol</label>
-            <input
-              className='w-full mb-4 border px-3 py-2 rounded'
-              value={nuevoRol}
-              onChange={(e) => setNuevoRol(e.target.value)}
-            />
-
-            <div className='flex justify-end gap-2 mt-6'>
-              <button
-                onClick={() => {
-                  setModalAgregar(false);
-                  setNuevoNombre("");
-                  setNuevoCorreo("");
-                  setNuevoTelefono("");
-                  setNuevoRol("");
-                }}
-                className='bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500'
-              >
-                Cancelar
-              </button>
-
-              <button
-                onClick={() => {
-                  const nuevoUsuario = {
-                    id: users.length + 1,
-                    nombre: nuevoNombre,
-                    correo: nuevoCorreo,
-                    telefono: nuevoTelefono,
-                    rol: nuevoRol,
-                    creado_en: new Date().toISOString(),
-                    actualizado_en: new Date().toISOString(),
-                  };
-
-                  setUsers([...users, nuevoUsuario]);
-
-                  // Limpiar y cerrar
-                  setModalAgregar(false);
-                  setNuevoNombre("");
-                  setNuevoCorreo("");
-                  setNuevoTelefono("");
-                  setNuevoRol("");
-                }}
-                className='bg-pink-600 text-white px-4 py-2 rounded hover:bg-pink-700'
-              >
-                Guardar Usuario
               </button>
             </div>
           </div>
@@ -434,4 +396,4 @@ const UsersManagement = () => {
   );
 };
 
-export default UsersManagement;
+export default EmpleadosManagement;
