@@ -5,7 +5,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
-from app.api.routes import auth, users, appointments, services, ai
+from app.api.routes import auth, users, appointments, services, ai, dashboard
 from app.core.config import settings
 from app.db.base import Base
 from app.db.session import sessionmanager
@@ -27,7 +27,8 @@ app.include_router(auth.router, prefix=settings.API_PREFIX)
 app.include_router(appointments.router, prefix=settings.API_PREFIX)
 app.include_router(services.router, prefix=settings.API_PREFIX)
 app.include_router(ai.router, prefix=settings.API_PREFIX)
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
+app.include_router(dashboard.router, prefix=settings.API_PREFIX)
+#app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 @app.get("/health")
 async def health():
@@ -41,8 +42,8 @@ async def health():
             return {"status": "unhealthy"}
     return {"status": "healthy mi king"}
 
-@app.get("/{full_path:path}", include_in_schema=False)
-async def serve_spa_root(full_path: str):
-    if full_path.startswith(settings.API_PREFIX.strip("/")) or full_path.startswith("health"):
-        raise HTTPException(status_code=404, detail="Not Found")
-    return FileResponse("app/static/index.html")
+#@app.get("/{full_path:path}", include_in_schema=False)
+#async def serve_spa_root(full_path: str):
+#    if full_path.startswith(settings.API_PREFIX.strip("/")) or full_path.startswith("health"):
+#        raise HTTPException(status_code=404, detail="Not Found")
+#    return FileResponse("app/static/index.html")
