@@ -1,322 +1,408 @@
-// frontend/src/pages/Client/ScheduleAppointment.jsx
-import { useState, useEffect } from 'react';
-import { Calendar, Clock, User, Scissors } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Calendar, Clock, User, Scissors, CheckCircle, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import appointmentService from '../../services/appointmentService';
 import serviceService from '../../services/serviceService';
 
 const ScheduleAppointment = () => {
-  const [appointments, setAppointments] = useState([]);
-  const [services, setServices] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [successMessage, setSuccessMessage] = useState('');
+  const navigate = useNavigate();
   
- 
-  const currentUserId = 1; 
-  const currentStylistId = 1; 
+  // Estados del formulario
+  const [step, setStep] = useState(1); // Paso actual del wizard
+  const [services, setServices] = useState([]);
+  const [selectedService, setSelectedService] = useState(null);
+  const [selectedDate, setSelectedDate] = useState('');
+  const [availability, setAvailability] = useState(null);
+  const [selectedStylist, setSelectedStylist] = useState(null);
+  const [selectedTime, setSelectedTime] = useState('');
+  
+  // Estados de UI
+  const [loading, setLoading] = useState(false);
+  const [loadingAvailability, setLoadingAvailability] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
 
-  const [formData, setFormData] = useState({
-    client_id: currentUserId,
-    stylist_id: currentStylistId,
-    service_id: '',
-    date: '',
-    status: 'pending',
-    created_by: currentUserId,
-    modified_by: currentUserId
-  });
-
+  // Cargar servicios al montar
   useEffect(() => {
-    loadData();
+    fetchServices();
   }, []);
 
-  const loadData = async () => {
+  const fetchServices = async () => {
     try {
-      setLoading(true);
-      setError(null);
-      const [servicesData, appointmentsData] = await Promise.all([
-        serviceService.listServices(),
-        appointmentService.listAppointments()
-      ]);
-      setServices(servicesData);
-      setAppointments(appointmentsData);
+      const data = await serviceService.listServices();
+      setServices(data);
     } catch (err) {
-      console.error('Error al cargar los datos:', err);
-      setError('Error al cargar los datos. Por favor, intenta de nuevo.');
+      console.error('Error al cargar servicios:', err);
+      setError('No se pudieron cargar los servicios');
+    }
+  };
+
+  // Cargar disponibilidad cuando se selecciona fecha
+  useEffect(() => {
+    if (selectedDate && selectedService) {
+      fetchAvailability();
+    }
+  }, [selectedDate, selectedService]);
+
+  const fetchAvailability = async () => {
+    setLoadingAvailability(true);
+    setError('');
+    
+    try {
+      const data = await appointmentService.getAvailability(
+        selectedDate,
+        selectedService.id
+      );
+      setAvailability(data);
+    } catch (err) {
+      console.error('Error al cargar disponibilidad:', err);
+      setError('No se pudo cargar la disponibilidad');
     } finally {
-      setLoading(false);
+      setLoadingAvailability(false);
     }
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    
-    // Validar horario laboral (8 AM - 8 PM)
-    if (name === 'date' && value) {
-      const selectedDate = new Date(value);
-      const hour = selectedDate.getHours();
-      
-      if (hour < 8 || hour >= 20) {
-        setError('El horario de atención es de 8:00 AM a 8:00 PM');
-        return;
-      }
-      
-      // Validar que el servicio no termine después de las 8 PM
-      if (formData.service_id) {
-        const selectedService = services.find(s => s.id === formData.service_id);
-        if (selectedService) {
-          const endTime = new Date(selectedDate.getTime() + selectedService.duration_min * 60000);
-          if (endTime.getHours() >= 20 || (endTime.getHours() === 19 && endTime.getMinutes() > 59)) {
-            setError(`Este servicio dura ${selectedService.duration_min} minutos y terminaría a las ${endTime.toLocaleTimeString('es-PE', {hour: '2-digit', minute: '2-digit'})}. El horario cierra a las 8:00 PM.`);
-            return;
-          }
-        }
-      }
-      
-      setError(null);
-    }
-    
-    setFormData(prev => ({
-      ...prev,
-      [name]: name === 'service_id' || name === 'stylist_id' ? parseInt(value) : value
-    }));
+  const handleServiceSelect = (service) => {
+    setSelectedService(service);
+    setStep(2);
+    // Reset selections
+    setSelectedDate('');
+    setSelectedStylist(null);
+    setSelectedTime('');
+    setAvailability(null);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError(null);
-    setSuccessMessage('');
+  const handleDateSelect = (date) => {
+    setSelectedDate(date);
+    setStep(3);
+    // Reset selections
+    setSelectedStylist(null);
+    setSelectedTime('');
+  };
 
-    // Validar duración del servicio
-    const selectedService = services.find(s => s.id === formData.service_id);
-    if (selectedService && formData.date) {
-      const appointmentDate = new Date(formData.date);
-      const endTime = new Date(appointmentDate.getTime() + selectedService.duration_min * 60000);
-      
-      if (endTime.getHours() >= 20 || (endTime.getHours() === 20 && endTime.getMinutes() > 0)) {
-        setError(`Este servicio dura ${selectedService.duration_min} minutos y terminaría después de las 8:00 PM. Por favor elige un horario más temprano.`);
-        return;
-      }
+  const handleStylistSelect = (stylist) => {
+    setSelectedStylist(stylist);
+    setStep(4);
+    // Reset time
+    setSelectedTime('');
+  };
+
+  const handleTimeSelect = (time) => {
+    setSelectedTime(time);
+  };
+
+  const handleConfirm = async () => {
+    if (!selectedService || !selectedDate || !selectedStylist || !selectedTime) {
+      setError('Por favor completa todos los campos');
+      return;
     }
+
+    setLoading(true);
+    setError('');
 
     try {
-      setLoading(true);
-      const newAppointment = await appointmentService.createAppointment(formData);
-      setAppointments(prev => [...prev, newAppointment]);
-      setSuccessMessage('¡Cita agendada exitosamente!');
-      
-      // Limpiar formulario
-      setFormData({
-        ...formData,
-        service_id: '',
-        date: '',
-        status: 'pending'
+      // Combinar fecha y hora
+      const appointmentDateTime = `${selectedDate}T${selectedTime}:00`;
+
+      await appointmentService.bookAppointment({
+        service_id: selectedService.id,
+        stylist_id: selectedStylist.stylist_id,
+        date: appointmentDateTime
       });
 
-      // Limpiar mensaje después de 3 segundos
-      setTimeout(() => setSuccessMessage(''), 3000);
+      setSuccess(true);
+      
+      // Redirigir después de 2 segundos
+      setTimeout(() => {
+        navigate('/client/appointments');
+      }, 2000);
+
     } catch (err) {
-      console.error('Error al crear la cita:', err);
-      setError('Error al crear la cita: ' + (err.response?.data?.detail || err.message));
+      console.error('Error al agendar cita:', err);
+      setError(err.response?.data?.detail || 'No se pudo agendar la cita');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCancelAppointment = async (appointmentId) => {
-    if (!window.confirm('¿Estás seguro de cancelar esta cita?')) return;
+  // Calcular fecha mínima (hoy)
+  const today = new Date().toISOString().split('T')[0];
 
-    try {
-      setLoading(true);
-      await appointmentService.deleteAppointment(appointmentId);
-      setAppointments(prev => prev.filter(apt => apt.id !== appointmentId));
-      setSuccessMessage('Cita cancelada exitosamente');
-      setTimeout(() => setSuccessMessage(''), 3000);
-    } catch (err) {
-      console.error('Error al cancelar la cita:', err);
-      setError('Error al cancelar la cita: ' + (err.response?.data?.detail || err.message));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleString('es-PE', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const getServiceName = (serviceId) => {
-    const service = services.find(s => s.id === serviceId);
-    return service ? service.name : `Servicio #${serviceId}`;
-  };
-
-  const getStatusBadge = (status) => {
-    const statusConfig = {
-      pending: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Pendiente' },
-      confirmed: { bg: 'bg-green-100', text: 'text-green-800', label: 'Confirmada' },
-      cancelled: { bg: 'bg-red-100', text: 'text-red-800', label: 'Cancelada' },
-      completed: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Completada' }
-    };
-    const config = statusConfig[status] || statusConfig.pending;
+  if (success) {
     return (
-      <span className={`px-3 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text}`}>
-        {config.label}
-      </span>
-    );
-  };
-
-  if (loading && appointments.length === 0 && services.length === 0) {
-    return (
-      <div className="container mx-auto p-8 bg-white rounded-lg shadow-md">
-        <div className="text-center text-gray-600 py-8">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-600 mx-auto"></div>
-          <p className="mt-4">Cargando...</p>
+      <div className="container mx-auto p-6 flex items-center justify-center min-h-screen">
+        <div className="bg-white rounded-lg shadow-lg p-8 max-w-md text-center">
+          <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">¡Cita Agendada!</h2>
+          <p className="text-gray-600 mb-6">Tu cita ha sido registrada exitosamente</p>
+          <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left">
+            <p className="text-sm text-gray-600 mb-1">Servicio:</p>
+            <p className="font-semibold text-gray-800 mb-3">{selectedService?.name}</p>
+            
+            <p className="text-sm text-gray-600 mb-1">Estilista:</p>
+            <p className="font-semibold text-gray-800 mb-3">{selectedStylist?.stylist_name}</p>
+            
+            <p className="text-sm text-gray-600 mb-1">Fecha y Hora:</p>
+            <p className="font-semibold text-gray-800">
+              {new Date(selectedDate).toLocaleDateString('es-ES', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })} - {selectedTime}
+            </p>
+          </div>
+          <p className="text-sm text-gray-500">Redirigiendo a Mis Citas...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-8 bg-white rounded-lg shadow-md">
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">
-        <Calendar className="inline-block mr-2 h-8 w-8 text-pink-600" />
-        Agendar Nueva Cita
-      </h1>
+    <div className="container mx-auto p-6">
+      {/* Header */}
+      <div className="mb-6">
+        <button
+          onClick={() => navigate('/client/dashboard')}
+          className="flex items-center text-pink-600 hover:text-pink-700 mb-4"
+        >
+          <ArrowLeft className="h-5 w-5 mr-2" />
+          Volver al Dashboard
+        </button>
+        <h1 className="text-3xl font-bold text-gray-800">Agendar Nueva Cita</h1>
+        <p className="text-gray-600 mt-2">Selecciona el servicio, fecha y horario de tu preferencia</p>
+      </div>
 
+      {/* Progress Steps */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between max-w-3xl mx-auto">
+          {[
+            { num: 1, label: 'Servicio', icon: Scissors },
+            { num: 2, label: 'Fecha', icon: Calendar },
+            { num: 3, label: 'Estilista', icon: User },
+            { num: 4, label: 'Horario', icon: Clock }
+          ].map((s, idx) => (
+            <React.Fragment key={s.num}>
+              <div className="flex flex-col items-center">
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                  step >= s.num ? 'bg-pink-600 text-white' : 'bg-gray-200 text-gray-400'
+                } transition-colors`}>
+                  <s.icon className="h-6 w-6" />
+                </div>
+                <p className={`text-sm mt-2 ${step >= s.num ? 'text-pink-600 font-semibold' : 'text-gray-400'}`}>
+                  {s.label}
+                </p>
+              </div>
+              {idx < 3 && (
+                <div className={`flex-1 h-1 ${step > s.num ? 'bg-pink-600' : 'bg-gray-200'} transition-colors mx-2`} />
+              )}
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+
+      {/* Error Message */}
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6 flex items-center">
-          <span className="mr-2">⚠️</span>
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6 max-w-3xl mx-auto">
           {error}
         </div>
       )}
 
-      {successMessage && (
-        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6 flex items-center">
-          <span className="mr-2">✓</span>
-          {successMessage}
-        </div>
-      )}
-
-      {/* Formulario de nueva cita */}
-      <div className="bg-gradient-to-r from-pink-50 to-purple-50 p-6 rounded-lg shadow-sm mb-8">
-        <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center">
-          <Scissors className="mr-2 h-5 w-5 text-pink-600" />
-          Nueva Cita
-        </h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 flex items-center">
-                <Scissors className="mr-1 h-4 w-4" />
-                Servicio
-              </label>
-              <select
-                name="service_id"
-                value={formData.service_id}
-                onChange={handleInputChange}
-                required
-                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-pink-500"
-              >
-                <option value="">Seleccionar servicio</option>
-                {services.map(service => (
-                  <option key={service.id} value={service.id}>
-                    {service.name} - {service.duration_min} min
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 flex items-center">
-                <Clock className="mr-1 h-4 w-4" />
-                Fecha y Hora
-              </label>
-              <input
-                type="datetime-local"
-                name="date"
-                value={formData.date}
-                onChange={handleInputChange}
-                required
-                min={new Date().toISOString().slice(0, 16)}
-                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-pink-500"
-              />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="bg-pink-600 text-white px-6 py-3 rounded-lg hover:bg-pink-700 transition duration-200 disabled:bg-gray-400 font-medium w-full md:w-auto"
-          >
-            {loading ? (
-              <span className="flex items-center justify-center">
-                <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-                </svg>
-                Agendando...
-              </span>
-            ) : (
-              '📅 Agendar Cita'
-            )}
-          </button>
-        </form>
-      </div>
-
-      {/* Lista de citas */}
-      <div className="bg-white">
-        <h2 className="text-2xl font-semibold mb-4 text-gray-800 flex items-center">
-          <User className="mr-2 h-6 w-6 text-pink-600" />
-          Mis Citas Agendadas
-        </h2>
-        
-        {appointments.length === 0 ? (
-          <div className="text-center py-12 bg-gray-50 rounded-lg">
-            <Calendar className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500 text-lg">No tienes citas agendadas</p>
-            <p className="text-gray-400 text-sm mt-2">Agenda tu primera cita usando el formulario de arriba</p>
-          </div>
-        ) : (
+      {/* Step 1: Seleccionar Servicio */}
+      {step === 1 && (
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">Selecciona un Servicio</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {appointments.map(appointment => (
+            {services.map((service) => (
               <div
-                key={appointment.id}
-                className="border border-gray-200 rounded-lg p-5 hover:shadow-lg transition duration-200 bg-white"
+                key={service.id}
+                onClick={() => handleServiceSelect(service)}
+                className="bg-white border-2 border-gray-200 rounded-lg p-6 cursor-pointer hover:border-pink-500 hover:shadow-lg transition-all"
               >
-                <div className="flex justify-between items-start mb-3">
-                  <h3 className="font-semibold text-lg text-gray-800">
-                    {getServiceName(appointment.service_id)}
-                  </h3>
-                  {getStatusBadge(appointment.status)}
+                <div className="flex items-start justify-between mb-3">
+                  <Scissors className="h-8 w-8 text-pink-600" />
+                  <span className="text-xs font-semibold text-pink-600 bg-pink-100 px-2 py-1 rounded">
+                    {service.duration_min} min
+                  </span>
                 </div>
-                
-                <div className="space-y-2 text-sm text-gray-600 mb-4">
-                  <p className="flex items-center">
-                    <Calendar className="h-4 w-4 mr-2 text-pink-500" />
-                    {formatDate(appointment.date)}
-                  </p>
-                  <p className="flex items-center">
-                    <User className="h-4 w-4 mr-2 text-pink-500" />
-                    Estilista #{appointment.stylist_id}
-                  </p>
-                </div>
-                
-                <button
-                  onClick={() => handleCancelAppointment(appointment.id)}
-                  disabled={loading || appointment.status === 'cancelled'}
-                  className="w-full bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition duration-200 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                >
-                  {appointment.status === 'cancelled' ? 'Cancelada' : 'Cancelar Cita'}
-                </button>
+                <h3 className="text-lg font-bold text-gray-800 mb-2">{service.name}</h3>
+                <p className="text-sm text-gray-600 mb-3">{service.description}</p>
               </div>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* Step 2: Seleccionar Fecha */}
+      {step === 2 && selectedService && (
+        <div className="max-w-2xl mx-auto">
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Selecciona una Fecha</h2>
+          <p className="text-gray-600 mb-6">
+            Servicio: <span className="font-semibold">{selectedService.name}</span> ({selectedService.duration_min} minutos)
+          </p>
+          
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <label className="block text-gray-700 font-semibold mb-2">Fecha:</label>
+            <input
+              type="date"
+              min={today}
+              value={selectedDate}
+              onChange={(e) => handleDateSelect(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 text-lg"
+            />
+            <p className="text-sm text-gray-500 mt-2">
+              Selecciona una fecha para ver la disponibilidad de estilistas
+            </p>
+          </div>
+
+          <button
+            onClick={() => setStep(1)}
+            className="mt-4 text-pink-600 hover:text-pink-700 flex items-center"
+          >
+            <ArrowLeft className="h-5 w-5 mr-2" />
+            Cambiar servicio
+          </button>
+        </div>
+      )}
+
+      {/* Step 3: Seleccionar Estilista */}
+      {step === 3 && selectedDate && (
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Selecciona un Estilista</h2>
+          <p className="text-gray-600 mb-6">
+            {new Date(selectedDate).toLocaleDateString('es-ES', { 
+              weekday: 'long', 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            })}
+          </p>
+
+          {loadingAvailability ? (
+            <div className="text-center py-12">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-pink-600 mb-4"></div>
+              <p className="text-gray-600">Cargando disponibilidad...</p>
+            </div>
+          ) : availability && availability.stylists.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {availability.stylists.map((stylist) => (
+                <div
+                  key={stylist.stylist_id}
+                  onClick={() => stylist.available_slots.length > 0 && handleStylistSelect(stylist)}
+                  className={`bg-white border-2 rounded-lg p-6 ${
+                    stylist.available_slots.length > 0
+                      ? 'border-gray-200 cursor-pointer hover:border-pink-500 hover:shadow-lg'
+                      : 'border-gray-100 opacity-50 cursor-not-allowed'
+                  } transition-all`}
+                >
+                  <div className="flex items-center mb-4">
+                    <div className="bg-pink-100 rounded-full p-3 mr-4">
+                      <User className="h-6 w-6 text-pink-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-800">{stylist.stylist_name}</h3>
+                      <p className="text-sm text-gray-600">
+                        {stylist.available_slots.length} horarios disponibles
+                      </p>
+                    </div>
+                  </div>
+                  {stylist.available_slots.length === 0 && (
+                    <p className="text-sm text-red-600">Sin disponibilidad para este día</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+              <p className="text-yellow-800">No hay disponibilidad para esta fecha</p>
+            </div>
+          )}
+
+          <button
+            onClick={() => setStep(2)}
+            className="mt-4 text-pink-600 hover:text-pink-700 flex items-center"
+          >
+            <ArrowLeft className="h-5 w-5 mr-2" />
+            Cambiar fecha
+          </button>
+        </div>
+      )}
+
+      {/* Step 4: Seleccionar Horario */}
+      {step === 4 && selectedStylist && (
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Selecciona un Horario</h2>
+          <p className="text-gray-600 mb-6">
+            Estilista: <span className="font-semibold">{selectedStylist.stylist_name}</span>
+          </p>
+
+          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h3 className="font-semibold text-gray-700 mb-4">Horarios Disponibles:</h3>
+            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              {selectedStylist.available_slots.map((time) => (
+                <button
+                  key={time}
+                  onClick={() => handleTimeSelect(time)}
+                  className={`py-3 px-4 rounded-lg font-semibold transition-all ${
+                    selectedTime === time
+                      ? 'bg-pink-600 text-white shadow-lg'
+                      : 'bg-gray-100 text-gray-700 hover:bg-pink-100 hover:text-pink-600'
+                  }`}
+                >
+                  {time}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {selectedTime && (
+            <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+              <h3 className="font-semibold text-gray-700 mb-4">Resumen de tu Cita:</h3>
+              <div className="space-y-3">
+                <div className="flex items-center">
+                  <Scissors className="h-5 w-5 text-pink-600 mr-3" />
+                  <span className="text-gray-700">{selectedService.name} ({selectedService.duration_min} min)</span>
+                </div>
+                <div className="flex items-center">
+                  <User className="h-5 w-5 text-pink-600 mr-3" />
+                  <span className="text-gray-700">{selectedStylist.stylist_name}</span>
+                </div>
+                <div className="flex items-center">
+                  <Calendar className="h-5 w-5 text-pink-600 mr-3" />
+                  <span className="text-gray-700">
+                    {new Date(selectedDate).toLocaleDateString('es-ES', { 
+                      weekday: 'long', 
+                      day: 'numeric', 
+                      month: 'long', 
+                      year: 'numeric' 
+                    })}
+                  </span>
+                </div>
+                <div className="flex items-center">
+                  <Clock className="h-5 w-5 text-pink-600 mr-3" />
+                  <span className="text-gray-700">{selectedTime}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-4">
+            <button
+              onClick={() => setStep(3)}
+              className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 px-6 rounded-lg transition duration-200"
+            >
+              Volver
+            </button>
+            <button
+              onClick={handleConfirm}
+              disabled={!selectedTime || loading}
+              className="flex-1 bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 px-6 rounded-lg transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Agendando...' : 'Confirmar Cita'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

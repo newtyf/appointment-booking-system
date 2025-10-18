@@ -17,23 +17,36 @@ const Login = () => {
     setSuccess('');
 
     try {
-      // Envía email y password como JSON al backend
       const response = await axios.post('/api/auth/login', {
         email: email,
         password: password,
       });
 
-      const { access_token, token_type } = response.data;
+      const { access_token, token_type, user } = response.data;
 
-      // Almacena el token y el tipo de token
+      // Almacenar en localStorage
       localStorage.setItem('access_token', access_token);
       localStorage.setItem('tokenType', token_type);
-      localStorage.setItem('isAuthenticated', 'true'); // Marca como autenticado
+      localStorage.setItem('user', JSON.stringify(user));
+      localStorage.setItem('isAuthenticated', 'true');
 
       setSuccess('¡Inicio de sesión exitoso!');
-      // Redirige al dashboard o página principal después de un breve delay
+
+      // Redirigir según rol 
       setTimeout(() => {
-        navigate('/dashboard'); // Redirige a la página principal Home según tu App.jsx
+        const userRole = user.role;
+        
+        if (userRole === 'client') {
+          navigate('/client/dashboard');
+        } else if (userRole === 'admin') {
+          navigate('/admin/dashboard');
+        } else if (userRole === 'stylist') {
+          navigate('/stylist/dashboard');
+        } else if (userRole === 'receptionist') {
+          navigate('/receptionist/dashboard');
+        } else {
+          navigate('/dashboard'); // Fallback
+        }
       }, 1000);
 
     } catch (err) {
@@ -62,7 +75,6 @@ const Login = () => {
         </div>
 
         <div className="w-full md:w-auto flex-grow">
-
           <Link
             to="/"
             className="inline-flex items-center text-pink-600 hover:text-pink-700 mb-4"
@@ -141,7 +153,6 @@ const Login = () => {
               Iniciar Sesión
             </Button>
 
-            {/* Enlace a la página de registro */}
             <p className="mt-4 text-center text-sm text-gray-600">
               ¿No tienes una cuenta?{' '}
               <Link to="/registro" className="font-semibold leading-6 text-pink-600 hover:text-pink-500">
