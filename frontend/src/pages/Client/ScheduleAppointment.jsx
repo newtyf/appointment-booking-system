@@ -14,16 +14,16 @@ import { useCulqiCheckout } from "../../hooks/useCulqiCheckout.js";
 
 const ScheduleAppointment = () => {
   const navigate = useNavigate();
+
   const { openCheckout } = useCulqiCheckout({
     onSuccess: async () => {
-      setSuccess(true);
-      setTimeout(() => {
-        navigate("/client/appointments");
-      }, 2000);
-      setLoading(false);
+      setLoading(true);
+      await handleConfirm();
     },
-    onError: (error) => {
-      setError(`Error en el pago: ${error}`);
+    onError: async (error) => {
+      setError(
+        `Error en el pago: ${error}, contacta al soporte para más información.`
+      );
       setLoading(false);
     },
   });
@@ -136,10 +136,11 @@ const ScheduleAppointment = () => {
         date: appointmentDateTime,
       });
 
-      openCheckout({
-        amount: selectedService.price * 100, // Monto en centavos
-        description: `Pago por servicio: ${selectedService.name}`,
-      });
+      setSuccess(true);
+      setTimeout(() => {
+        navigate("/client/appointments");
+      }, 2000);
+      setLoading(false);
     } catch (err) {
       console.error("Error al agendar cita:", err);
       setError(err.response?.data?.detail || "No se pudo agendar la cita");
@@ -478,7 +479,18 @@ const ScheduleAppointment = () => {
               Volver
             </button>
             <button
-              onClick={handleConfirm}
+              onClick={() => {
+                openCheckout({
+                  amount: selectedService.price * 100, // Monto en centavos
+                  description: `Pago por servicio: ${selectedService.name}`,
+                  currency: "PEN",
+                  email: JSON.parse(localStorage.getItem("user")).email || "",
+                  metadata: {
+                    first_name:
+                      JSON.parse(localStorage.getItem("user")).name || "",
+                  },
+                });
+              }}
               disabled={!selectedTime || loading}
               className='flex-1 bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 px-6 rounded-lg transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed'
             >
