@@ -48,7 +48,7 @@ async def list_my_appointments(
 @router.get("/availability", response_model=dict)
 async def get_availability(
     date: str,
-    appointment_service: Annotated[AppointmentService, Depends(get_appointment_service)],  # ← Mover aquí
+    appointment_service: Annotated[AppointmentService, Depends(get_appointment_service)],
     service_id: Optional[int] = None,
     stylist_id: Optional[int] = None
 ):
@@ -81,10 +81,15 @@ async def read_appointment(
 async def create_appointment(
     appointment_create: AppointmentCreate,
     appointment_service: Annotated[AppointmentService, Depends(get_appointment_service)],
+    current_user: Annotated[User, Depends(get_current_user)],
     _: Annotated[bool, Depends(check_user_role("admin", "receptionist"))]
 ):
     """Crear cita (registrado o walk-in)"""
     try:
+        # Asignar created_by y modified_by del usuario autenticado
+        appointment_create.created_by = current_user.id
+        appointment_create.modified_by = current_user.id
+        
         return await appointment_service.create_appointment(appointment_create)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

@@ -25,8 +25,8 @@ class AppointmentCreate(BaseModel):
     service_id: int
     date: datetime
     status: str = "pending"
-    created_by: int
-    modified_by: int
+    created_by: Optional[int] = None  # ← AHORA ES OPCIONAL
+    modified_by: Optional[int] = None  # ← AHORA ES OPCIONAL
     
     @field_validator('client_id', 'client_name')
     @classmethod
@@ -42,7 +42,7 @@ class AppointmentCreateForClient(BaseModel):
 class AppointmentCreateWalkIn(BaseModel):
     """Admin/Receptionist crea cita para walk-in"""
     client_name: str = Field(..., min_length=1, max_length=100)
-    client_phone: str = Field(..., min_length=1, max_length=20)
+    client_phone: Optional[str] = Field(None, max_length=20)
     client_email: Optional[str] = None
     stylist_id: int
     service_id: int
