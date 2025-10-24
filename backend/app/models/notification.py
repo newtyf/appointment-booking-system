@@ -1,6 +1,7 @@
 # backend/app/models/notification.py
 from sqlalchemy import Integer, String, DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
+from datetime import datetime
 from app.db.base import Base
 
 class Notification(Base):
@@ -12,7 +13,7 @@ class Notification(Base):
     type: Mapped[str] = mapped_column(String(length=30))  # confirmación, recordatorio, cancelación
     channel: Mapped[str] = mapped_column(String(length=30))  # email, sms, etc.
     status: Mapped[str] = mapped_column(String(length=30))  # enviado, fallido
-    sent_at: Mapped[DateTime] = mapped_column(DateTime)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     def __repr__(self):
         return f"<Notification(id={self.id}, user_id={self.user_id}, type='{self.type}')>"
