@@ -22,6 +22,11 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256" # Algoritmo de JWT
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30 # Tiempo de expiración del token de acceso
     REPLICATE_API_TOKEN: str = ""
+    
+    SMTP_SERVER: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    EMAIL_SENDER: str = ''
+    EMAIL_PASSWORD: str = ''
 
     CULQI_SECRET_KEY: str = ""
     CULQI_API_URL: str = "https://api.culqi.com/v2" # URL base de la API de Culqi
