@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30 # Tiempo de expiración del token de acceso
     REPLICATE_API_TOKEN: str = ""
 
+    CULQI_SECRET_KEY: str = ""
+    CULQI_API_URL: str = "https://api.culqi.com/v2" # URL base de la API de Culqi
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

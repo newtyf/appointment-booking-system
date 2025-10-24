@@ -1,5 +1,5 @@
 # backend/app/models/service.py
-from sqlalchemy import Integer, String, Text
+from sqlalchemy import Integer, String, Text,Float
 from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
 
@@ -10,6 +10,7 @@ class Service(Base):
     name: Mapped[str] = mapped_column(String(length=100))
     duration_min: Mapped[int] = mapped_column(Integer)
     description: Mapped[str] = mapped_column(Text)
+    price: Mapped[float] = mapped_column(Float(2), nullable=False, default=0.0)
 
     def __repr__(self):
         return f"<Service(id={self.id}, name='{self.name}')>"

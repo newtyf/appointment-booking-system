@@ -5,7 +5,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
-from app.api.routes import auth, users, appointments, services, ai, dashboard
+from app.api.routes import auth, users, appointments, services, ai, dashboard, payments
 from app.core.config import settings
 from app.db.base import Base
 from app.db.session import sessionmanager
@@ -28,6 +28,7 @@ app.include_router(appointments.router, prefix=settings.API_PREFIX)
 app.include_router(services.router, prefix=settings.API_PREFIX)
 app.include_router(ai.router, prefix=settings.API_PREFIX)
 app.include_router(dashboard.router, prefix=settings.API_PREFIX)
+app.include_router(payments.router, prefix=f"{settings.API_PREFIX}/payments", tags=["payments"])
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 @app.get("/health")

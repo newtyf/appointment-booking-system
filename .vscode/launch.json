@@ -5,16 +5,25 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Python Debugger: FastAPI",
+      "name": "Run Python Debugger: FastAPI",
       "type": "debugpy",
       "request": "launch",
       "module": "uvicorn",
-      "args": [
-        "app.app:app",
-        "--reload"
-      ],
+      "args": ["app.app:app", "--reload"],
       "cwd": "${workspaceFolder}/backend",
-      "jinja": true
-      }
+      "justMyCode": true,
+      "jinja": false
+    },
+    {
+      "name": "Attach Python Debugger: FastAPI",
+      "type": "debugpy",
+      "request": "attach",
+      "connect": {
+        "host": "localhost",
+        "port": 50729
+      },
+      "justMyCode": true,
+      "jinja": false
+    }
   ]
 }
