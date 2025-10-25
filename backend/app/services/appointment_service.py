@@ -1,222 +1,217 @@
-from datetime import datetime, timezone
-from typing import List, Optional
-from sqlalchemy import select, and_, or_
+from datetime import datetime, timedelta
+from typing import Optional, List
+from sqlalchemy import select, func, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.appointment import Appointment
-from app.models.user import User
 from app.models.service import Service
+from app.models.user import User
 from app.schemas.appointment import (
     AppointmentCreate,
     AppointmentUpdate,
+    AppointmentInDB,
     AppointmentCreateForClient,
     AppointmentCreateWalkIn
 )
 
-from app.services.notification_service import NotificationService
-
 
 class AppointmentService:
-    def __init__(self, db: AsyncSession, notification_service: NotificationService):
+    def __init__(self, db: AsyncSession, notification_service=None):
         self.db = db
         self.notification_service = notification_service
 
-
-    async def _validate_datetime(self, appointment_date: datetime):
-        """Validar que la fecha de la cita sea válida"""
-        # Asegurarse de que ambas fechas tengan timezone
-        now = datetime.now(timezone.utc)
-        
-        # Si appointment_date no tiene timezone, agregarlo
-        if appointment_date.tzinfo is None:
-            appointment_date = appointment_date.replace(tzinfo=timezone.utc)
-        
-        if appointment_date < now:
-            raise ValueError("No se pueden agendar citas en el pasado")
-        
-        # Validar horario de trabajo (8 AM - 8 PM)
-        hour = appointment_date.hour
-        if hour < 8 or hour >= 20:
-            raise ValueError("Las citas deben ser entre las 8:00 AM y 8:00 PM")
-        
-        return True
-
-    async def _check_stylist_availability(
-        self, 
-        stylist_id: int, 
-        date: datetime, 
-        service_id: int,
-        exclude_appointment_id: Optional[int] = None
-    ):
-        """Verificar si el estilista está disponible"""
-        # Obtener duración del servicio
-        service_result = await self.db.execute(
-            select(Service).where(Service.id == service_id)
-        )
-        service = service_result.scalar_one_or_none()
-        
-        if not service:
-            raise ValueError("Servicio no encontrado")
-        
-        # Calcular rango de tiempo de la nueva cita
-        from datetime import timedelta
-        end_time = date + timedelta(minutes=service.duration_min)
-        
-        # Buscar citas que se traslapen
-        query = select(Appointment).where(
-            and_(
-                Appointment.stylist_id == stylist_id,
-                Appointment.status.in_(['pending', 'confirmed']),
-                or_(
-                    # Nueva cita comienza durante una existente
-                    and_(
-                        Appointment.date <= date,
-                        Appointment.date >= end_time  # Esto debería ser date + duration
-                    ),
-                    # Nueva cita termina durante una existente
-                    and_(
-                        Appointment.date <= end_time,
-                        Appointment.date >= date
-                    )
-                )
-            )
-        )
-        
-        if exclude_appointment_id:
-            query = query.where(Appointment.id != exclude_appointment_id)
-        
+    async def list_appointments(self) -> list[AppointmentInDB]:
+        """Listar todas las citas"""
+        query = select(Appointment).order_by(Appointment.date.desc())
         result = await self.db.execute(query)
-        conflicting_appointment = result.scalar_one_or_none()
+        appointments = result.scalars().all()
         
-        if conflicting_appointment:
-            raise ValueError(f"El estilista no está disponible en ese horario")
+        appointments_with_details = []
+        for apt in appointments:
+            apt_dict = apt.to_dict()
+            
+            # Obtener nombre del servicio
+            if apt.service_id:
+                service_query = select(Service).where(Service.id == apt.service_id)
+                service_result = await self.db.execute(service_query)
+                service = service_result.scalar_one_or_none()
+                apt_dict['service_name'] = service.name if service else None
+            
+            # Si no es walk-in, obtener nombre del cliente
+            if not apt.is_walk_in and apt.client_id:
+                client_query = select(User).where(User.id == apt.client_id)
+                client_result = await self.db.execute(client_query)
+                client = client_result.scalar_one_or_none()
+                if client and not apt.client_name:
+                    apt_dict['client_name'] = client.name
+            
+            # Obtener nombre del estilista
+            if apt.stylist_id:
+                stylist_query = select(User).where(User.id == apt.stylist_id)
+                stylist_result = await self.db.execute(stylist_query)
+                stylist = stylist_result.scalar_one_or_none()
+                apt_dict['stylist_name'] = stylist.name if stylist else None
+            
+            appointments_with_details.append(AppointmentInDB(**apt_dict))
         
-        return True
+        return appointments_with_details
 
-    async def list_appointments(self) -> List[Appointment]:
-        """Listar todas las citas (admin/receptionist)"""
-        result = await self.db.execute(
-            select(Appointment).order_by(Appointment.date.desc())
+    async def list_stylist_appointments(self, stylist_id: int) -> list[AppointmentInDB]:
+        """Listar citas de un estilista específico"""
+        query = (
+            select(Appointment)
+            .where(Appointment.stylist_id == stylist_id)
+            .order_by(Appointment.date.desc())
         )
-        return result.scalars().all()
+        result = await self.db.execute(query)
+        appointments = result.scalars().all()
+        
+        appointments_with_details = []
+        for apt in appointments:
+            apt_dict = apt.to_dict()
+            
+            # Obtener nombre del servicio
+            if apt.service_id:
+                service_query = select(Service).where(Service.id == apt.service_id)
+                service_result = await self.db.execute(service_query)
+                service = service_result.scalar_one_or_none()
+                apt_dict['service_name'] = service.name if service else None
+            
+            # Si no es walk-in, obtener nombre del cliente
+            if not apt.is_walk_in and apt.client_id:
+                client_query = select(User).where(User.id == apt.client_id)
+                client_result = await self.db.execute(client_query)
+                client = client_result.scalar_one_or_none()
+                if client and not apt.client_name:
+                    apt_dict['client_name'] = client.name
+            
+            appointments_with_details.append(AppointmentInDB(**apt_dict))
+        
+        return appointments_with_details
 
-    async def list_user_appointments(self, user_id: int) -> List[Appointment]:
+    async def list_user_appointments(self, user_id: int) -> list[AppointmentInDB]:
         """Listar citas de un cliente específico"""
-        result = await self.db.execute(
+        query = (
             select(Appointment)
             .where(Appointment.client_id == user_id)
             .order_by(Appointment.date.desc())
         )
-        return result.scalars().all()
+        result = await self.db.execute(query)
+        appointments = result.scalars().all()
+        
+        appointments_with_details = []
+        for apt in appointments:
+            apt_dict = apt.to_dict()
+            
+            # Obtener nombre del servicio
+            if apt.service_id:
+                service_query = select(Service).where(Service.id == apt.service_id)
+                service_result = await self.db.execute(service_query)
+                service = service_result.scalar_one_or_none()
+                apt_dict['service_name'] = service.name if service else None
+            
+            # Obtener nombre del estilista
+            if apt.stylist_id:
+                stylist_query = select(User).where(User.id == apt.stylist_id)
+                stylist_result = await self.db.execute(stylist_query)
+                stylist = stylist_result.scalar_one_or_none()
+                apt_dict['stylist_name'] = stylist.name if stylist else None
+            
+            appointments_with_details.append(AppointmentInDB(**apt_dict))
+        
+        return appointments_with_details
 
-    async def list_stylist_appointments(self, stylist_id: int) -> List[Appointment]:
-        """Listar citas de un estilista"""
-        result = await self.db.execute(
-            select(Appointment)
-            .where(Appointment.stylist_id == stylist_id)
-            .order_by(Appointment.date.asc())
-        )
-        return result.scalars().all()
-
-    async def get_appointment(self, appointment_id: int) -> Optional[Appointment]:
+    async def get_appointment(self, appointment_id: int) -> Optional[AppointmentInDB]:
         """Obtener una cita por ID"""
-        result = await self.db.execute(
-            select(Appointment).where(Appointment.id == appointment_id)
-        )
-        return result.scalar_one_or_none()
+        query = select(Appointment).where(Appointment.id == appointment_id)
+        result = await self.db.execute(query)
+        appointment = result.scalar_one_or_none()
+        
+        if not appointment:
+            return None
+        
+        apt_dict = appointment.to_dict()
+        
+        # Obtener nombre del servicio
+        if appointment.service_id:
+            service_query = select(Service).where(Service.id == appointment.service_id)
+            service_result = await self.db.execute(service_query)
+            service = service_result.scalar_one_or_none()
+            apt_dict['service_name'] = service.name if service else None
+        
+        # Si no es walk-in, obtener nombre del cliente
+        if not appointment.is_walk_in and appointment.client_id:
+            client_query = select(User).where(User.id == appointment.client_id)
+            client_result = await self.db.execute(client_query)
+            client = client_result.scalar_one_or_none()
+            if client and not appointment.client_name:
+                apt_dict['client_name'] = client.name
+        
+        # Obtener nombre del estilista
+        if appointment.stylist_id:
+            stylist_query = select(User).where(User.id == appointment.stylist_id)
+            stylist_result = await self.db.execute(stylist_query)
+            stylist = stylist_result.scalar_one_or_none()
+            apt_dict['stylist_name'] = stylist.name if stylist else None
+        
+        return AppointmentInDB(**apt_dict)
 
-    async def can_user_access_appointment(
-        self, 
-        appointment: Appointment, 
-        user: User
-    ) -> bool:
-        """Verificar si un usuario puede acceder a una cita"""
-        if user.role in ["admin", "receptionist"]:
-            return True
-        elif user.role == "stylist" and appointment.stylist_id == user.id:
-            return True
-        elif user.role == "client" and appointment.client_id == user.id:
-            return True
-        return False
-
-    async def create_appointment(self, appointment_create: AppointmentCreate) -> Appointment:
-        """Crear cita (para admin/receptionist)"""
-        # Asegurar que la fecha tenga timezone
-        if appointment_create.date.tzinfo is None:
-            appointment_create.date = appointment_create.date.replace(tzinfo=timezone.utc)
+    async def create_appointment(self, appointment_data: AppointmentCreate) -> AppointmentInDB:
+        """Crear una nueva cita (registrado o walk-in)"""
         
-        # Validar fecha
-        await self._validate_datetime(appointment_create.date)
-        
-        # Verificar disponibilidad del estilista
-        await self._check_stylist_availability(
-            appointment_create.stylist_id,
-            appointment_create.date,
-            appointment_create.service_id
+        # Validar disponibilidad
+        is_available = await self._check_availability(
+            stylist_id=appointment_data.stylist_id,
+            appointment_date=appointment_data.date,
+            service_id=appointment_data.service_id
         )
         
-        # Validar que se proporcione client_id O datos de walk-in
-        if not appointment_create.client_id and not appointment_create.client_name:
-            raise ValueError("Debe proporcionar un client_id o datos de walk-in")
+        if not is_available:
+            raise ValueError("El horario no está disponible")
         
+        # Crear la cita
         new_appointment = Appointment(
-            client_id=appointment_create.client_id,
-            client_name=appointment_create.client_name,
-            client_phone=appointment_create.client_phone,
-            client_email=appointment_create.client_email,
-            is_walk_in=appointment_create.is_walk_in,
-            stylist_id=appointment_create.stylist_id,
-            service_id=appointment_create.service_id,
-            date=appointment_create.date,
-            status=appointment_create.status,
-            created_by=appointment_create.created_by,
-            modified_by=appointment_create.modified_by
+            client_id=appointment_data.client_id,
+            client_name=appointment_data.client_name,
+            client_phone=appointment_data.client_phone,
+            client_email=appointment_data.client_email,
+            is_walk_in=appointment_data.is_walk_in,
+            stylist_id=appointment_data.stylist_id,
+            service_id=appointment_data.service_id,
+            date=appointment_data.date,
+            status=appointment_data.status or "pending",
+            created_by=appointment_data.created_by,
+            modified_by=appointment_data.modified_by
         )
         
         self.db.add(new_appointment)
         await self.db.commit()
         await self.db.refresh(new_appointment)
-
-        # Enviar notificaciones (email y web) si hay un cliente registrado
-        if new_appointment.client_id:
-            await self.notification_service.create_and_send_notification(
-                appointment_id=new_appointment.id,
-                user_id=new_appointment.client_id,
-                type="reservado"
-            )
-            # Refrescar el appointment después de las notificaciones
-
-        await self.db.commit();
-        await self.db.refresh(new_appointment)
-
-        return new_appointment
+        
+        return await self.get_appointment(new_appointment.id)
 
     async def create_appointment_for_client(
         self,
         appointment_data: AppointmentCreateForClient,
         client_id: int,
         created_by: int
-    ) -> Appointment:
+    ) -> AppointmentInDB:
         """Cliente crea su propia cita"""
-        # Asegurar que la fecha tenga timezone
-        if appointment_data.date.tzinfo is None:
-            appointment_data.date = appointment_data.date.replace(tzinfo=timezone.utc)
         
-        # Validar fecha
-        await self._validate_datetime(appointment_data.date)
+        # Obtener datos del cliente
+        client_query = select(User).where(User.id == client_id)
+        result = await self.db.execute(client_query)
+        client = result.scalar_one_or_none()
         
-        # Verificar disponibilidad del estilista
-        await self._check_stylist_availability(
-            appointment_data.stylist_id,
-            appointment_data.date,
-            appointment_data.service_id
-        )
+        if not client:
+            raise ValueError("Cliente no encontrado")
         
-        new_appointment = Appointment(
+        # Crear AppointmentCreate con los datos del cliente
+        appointment_create = AppointmentCreate(
             client_id=client_id,
-            client_name=None,
-            client_phone=None,
-            client_email=None,
+            client_name=client.name,
+            client_phone=client.phone,
+            client_email=client.email,
             is_walk_in=False,
             stylist_id=appointment_data.stylist_id,
             service_id=appointment_data.service_id,
@@ -226,124 +221,88 @@ class AppointmentService:
             modified_by=created_by
         )
         
-        self.db.add(new_appointment)
-        await self.db.commit()
-        await self.db.refresh(new_appointment)
-
-        # Crear y enviar notificaciones (email y web) de reserva
-        await self.notification_service.create_and_send_notification(
-            appointment_id=new_appointment.id,
-            user_id=client_id,
-            type="reservado"
-        )
-
-        await self.db.commit()
-        await self.db.refresh(new_appointment)
-        return new_appointment
+        return await self.create_appointment(appointment_create)
 
     async def create_walk_in_appointment(
         self,
         appointment_data: AppointmentCreateWalkIn,
         created_by: int
-    ) -> Appointment:
-        """Crear cita para walk-in"""
-        # Asegurar que la fecha tenga timezone
-        if appointment_data.date.tzinfo is None:
-            appointment_data.date = appointment_data.date.replace(tzinfo=timezone.utc)
+    ) -> AppointmentInDB:
+        """Crear cita para cliente walk-in"""
         
-        # Validar fecha (walk-ins pueden ser en el momento, así que comentamos esta validación)
-        # await self._validate_datetime(appointment_data.date)
-        
-        # Verificar disponibilidad del estilista
-        await self._check_stylist_availability(
-            appointment_data.stylist_id,
-            appointment_data.date,
-            appointment_data.service_id
-        )
-        
-        new_appointment = Appointment(
+        appointment_create = AppointmentCreate(
             client_id=None,
             client_name=appointment_data.client_name,
-            client_phone=appointment_data.client_phone or "",
+            client_phone=appointment_data.client_phone,
             client_email=appointment_data.client_email,
             is_walk_in=True,
             stylist_id=appointment_data.stylist_id,
             service_id=appointment_data.service_id,
             date=appointment_data.date,
-            status=appointment_data.status,
+            status="confirmed",
             created_by=created_by,
             modified_by=created_by
         )
         
-        self.db.add(new_appointment)
-        await self.db.commit()
-        await self.db.refresh(new_appointment)
-        return new_appointment
+        return await self.create_appointment(appointment_create)
 
     async def update_appointment(
         self,
         appointment_id: int,
-        appointment_update: AppointmentUpdate
-    ) -> Optional[Appointment]:
-        """Actualizar una cita"""
-        result = await self.db.execute(
-            select(Appointment).where(Appointment.id == appointment_id)
-        )
+        appointment_data: AppointmentUpdate
+    ) -> AppointmentInDB:
+        """Actualizar una cita existente"""
+        query = select(Appointment).where(Appointment.id == appointment_id)
+        result = await self.db.execute(query)
         appointment = result.scalar_one_or_none()
         
         if not appointment:
-            return None
+            raise ValueError("Cita no encontrada")
         
-        # Actualizar campos si se proporcionan
-        if appointment_update.date is not None:
-            # Asegurar timezone
-            if appointment_update.date.tzinfo is None:
-                appointment_update.date = appointment_update.date.replace(tzinfo=timezone.utc)
+        # Actualizar solo los campos proporcionados
+        update_data = appointment_data.model_dump(exclude_unset=True)
+        
+        # Si se actualiza la fecha, verificar disponibilidad
+        if "date" in update_data or "stylist_id" in update_data or "service_id" in update_data:
+            new_date = update_data.get("date", appointment.date)
+            new_stylist = update_data.get("stylist_id", appointment.stylist_id)
+            new_service = update_data.get("service_id", appointment.service_id)
             
-            await self._validate_datetime(appointment_update.date)
-            await self._check_stylist_availability(
-                appointment_update.stylist_id or appointment.stylist_id,
-                appointment_update.date,
-                appointment_update.service_id or appointment.service_id,
+            is_available = await self._check_availability(
+                stylist_id=new_stylist,
+                appointment_date=new_date,
+                service_id=new_service,
                 exclude_appointment_id=appointment_id
             )
-            appointment.date = appointment_update.date
+            
+            if not is_available:
+                raise ValueError("El horario no está disponible")
         
-        if appointment_update.status is not None:
-            appointment.status = appointment_update.status
-        
-        if appointment_update.stylist_id is not None:
-            appointment.stylist_id = appointment_update.stylist_id
-        
-        if appointment_update.service_id is not None:
-            appointment.service_id = appointment_update.service_id
-        
-        if appointment_update.modified_by is not None:
-            appointment.modified_by = appointment_update.modified_by
+        for key, value in update_data.items():
+            setattr(appointment, key, value)
         
         await self.db.commit()
         await self.db.refresh(appointment)
-        return appointment
+        
+        return await self.get_appointment(appointment.id)
 
     async def update_appointment_status(
         self,
         appointment_id: int,
         status: str,
         modified_by: int
-    ) -> Optional[Appointment]:
-        """Cambiar el estado de una cita"""
-        result = await self.db.execute(
-            select(Appointment).where(Appointment.id == appointment_id)
-        )
+    ) -> AppointmentInDB:
+        """Actualizar el estado de una cita"""
+        query = select(Appointment).where(Appointment.id == appointment_id)
+        result = await self.db.execute(query)
         appointment = result.scalar_one_or_none()
         
         if not appointment:
-            return None
+            raise ValueError("Cita no encontrada")
         
-        # Validar transiciones de estado válidas
-        valid_statuses = ['pending', 'confirmed', 'completed', 'cancelled', 'no-show']
+        valid_statuses = ["pending", "confirmed", "completed", "cancelled", "no-show"]
         if status not in valid_statuses:
-            raise ValueError(f"Estado inválido: {status}")
+            raise ValueError(f"Estado inválido. Debe ser uno de: {', '.join(valid_statuses)}")
         
         appointment.status = status
         appointment.modified_by = modified_by
@@ -351,108 +310,387 @@ class AppointmentService:
         await self.db.commit()
         await self.db.refresh(appointment)
         
-        # Enviar notificaciones (email y web) si hay un cliente registrado y es confirmación o cancelación
-        if appointment.client_id and status in ['confirmed', 'cancelled']:
-            notification_type = "confirmado" if status == "confirmed" else "cancelado"
-            await self.notification_service.create_and_send_notification(
-                appointment_id=appointment.id,
-                user_id=appointment.client_id,
-                type=notification_type
-            )
-            await self.db.commit();
-        
-        await self.db.refresh(appointment)
-        return appointment
+        return await self.get_appointment(appointment.id)
 
-    async def delete_appointment(self, appointment_id: int) -> bool:
-        """Eliminar/Cancelar una cita"""
-        result = await self.db.execute(
-            select(Appointment).where(Appointment.id == appointment_id)
-        )
+    async def delete_appointment(self, appointment_id: int) -> None:
+        """Cancelar (eliminar) una cita"""
+        query = select(Appointment).where(Appointment.id == appointment_id)
+        result = await self.db.execute(query)
         appointment = result.scalar_one_or_none()
         
         if not appointment:
-            return False
+            raise ValueError("Cita no encontrada")
         
-        # En lugar de eliminar, cambiar estado a cancelado
-        appointment.status = 'cancelled'
+        appointment.status = "cancelled"
         await self.db.commit()
-        return True
+
+    async def can_user_access_appointment(self, appointment: AppointmentInDB, user: User) -> bool:
+        """Verificar si un usuario puede acceder a una cita"""
+        if user.role in ["admin", "receptionist"]:
+            return True
+        elif user.role == "stylist":
+            return appointment.stylist_id == user.id
+        elif user.role == "client":
+            return appointment.client_id == user.id
+        return False
 
     async def get_availability(
         self,
         date_str: str,
         service_id: Optional[int] = None,
         stylist_id: Optional[int] = None
-    ):
-        """Obtener disponibilidad de estilistas para una fecha"""
-        from datetime import datetime, timedelta
-        
-        # Parsear fecha
+    ) -> dict:
+        """Obtener disponibilidad de horarios"""
         try:
-            date = datetime.strptime(date_str, "%Y-%m-%d")
+            date = datetime.strptime(date_str, "%Y-%m-%d").date()
         except ValueError:
             raise ValueError("Formato de fecha inválido. Use YYYY-MM-DD")
         
-        # Generar slots de tiempo (8 AM - 8 PM, cada hora)
-        slots = []
-        for hour in range(8, 20):
-            slot_time = date.replace(hour=hour, minute=0, second=0, microsecond=0)
-            slots.append(slot_time)
+        # Obtener duración del servicio si se proporciona
+        service_duration = 60  # Por defecto 60 minutos
+        if service_id:
+            service_query = select(Service).where(Service.id == service_id)
+            result = await self.db.execute(service_query)
+            service = result.scalar_one_or_none()
+            if service:
+                service_duration = service.duration
         
-        # Si se especifica un estilista, solo verificar ese
+        # Horarios de trabajo (9 AM - 6 PM)
+        work_start = datetime.combine(date, datetime.min.time().replace(hour=9))
+        work_end = datetime.combine(date, datetime.min.time().replace(hour=18))
+        
+        # Generar slots de tiempo
+        all_slots = []
+        current = work_start
+        while current < work_end:
+            all_slots.append(current)
+            current += timedelta(minutes=30)
+        
+        # Obtener citas existentes
+        query = select(Appointment).where(
+            func.date(Appointment.date) == date,
+            or_(
+                Appointment.status == 'pending',
+                Appointment.status == 'confirmed'
+            )
+        )
+        
         if stylist_id:
-            stylist_result = await self.db.execute(
-                select(User).where(User.id == stylist_id)
-            )
-            stylists = [stylist_result.scalar_one_or_none()]
-        else:
-            # Obtener todos los estilistas
-            stylists_result = await self.db.execute(
-                select(User).where(User.role == 'stylist')
-            )
-            stylists = stylists_result.scalars().all()
+            query = query.where(Appointment.stylist_id == stylist_id)
         
-        availability = []
+        result = await self.db.execute(query)
+        existing_appointments = result.scalars().all()
         
-        for stylist in stylists:
-            if not stylist:
-                continue
+        # Marcar slots ocupados
+        available_slots = []
+        for slot in all_slots:
+            is_available = True
+            slot_end = slot + timedelta(minutes=service_duration)
             
-            # Obtener citas del estilista para ese día
-            appointments_result = await self.db.execute(
-                select(Appointment).where(
-                    and_(
-                        Appointment.stylist_id == stylist.id,
-                        Appointment.status.in_(['pending', 'confirmed']),
-                        Appointment.date >= date,
-                        Appointment.date < date + timedelta(days=1)
-                    )
-                )
-            )
-            appointments = appointments_result.scalars().all()
-            
-            # Filtrar slots disponibles
-            available_slots = []
-            for slot in slots:
-                is_available = True
-                for appointment in appointments:
-                    # Si el slot coincide con una cita existente, no está disponible
-                    if appointment.date.hour == slot.hour:
-                        is_available = False
-                        break
+            for apt in existing_appointments:
+                apt_date = apt.date
                 
-                if is_available:
-                    available_slots.append(slot.strftime("%H:%M"))
+                # Obtener duración del servicio de la cita
+                apt_duration = 60
+                if apt.service_id:
+                    service_query = select(Service).where(Service.id == apt.service_id)
+                    service_result = await self.db.execute(service_query)
+                    service = service_result.scalar_one_or_none()
+                    if service:
+                        apt_duration = service.duration
+                
+                apt_end = apt_date + timedelta(minutes=apt_duration)
+                
+                # Verificar si hay solapamiento
+                if (slot < apt_end and slot_end > apt_date):
+                    is_available = False
+                    break
             
-            availability.append({
-                "stylist_id": stylist.id,
-                "stylist_name": stylist.name,
-                "available_slots": available_slots
-            })
+            if is_available:
+                available_slots.append(slot.strftime("%H:%M"))
         
         return {
             "date": date_str,
-            "service_id": service_id,
-            "stylists": availability
+            "available_slots": available_slots
         }
+
+    async def get_stylist_dashboard(self, stylist_id: int) -> dict:
+        """Dashboard para estilista"""
+        now = datetime.now()
+        today_start = datetime.combine(now.date(), datetime.min.time())
+        today_end = datetime.combine(now.date(), datetime.max.time())
+        
+        # Próxima cita
+        next_appointment = await self._get_next_appointment(stylist_id)
+        
+        # Citas de hoy
+        today_query = (
+            select(Appointment)
+            .where(
+                Appointment.stylist_id == stylist_id,
+                Appointment.date >= today_start,
+                Appointment.date <= today_end
+            )
+            .order_by(Appointment.date)
+        )
+        result = await self.db.execute(today_query)
+        appointments_today_raw = result.scalars().all()
+        
+        appointments_today = []
+        for apt in appointments_today_raw:
+            apt_dict = apt.to_dict()
+            
+            # Obtener nombre del servicio
+            if apt.service_id:
+                service_query = select(Service).where(Service.id == apt.service_id)
+                service_result = await self.db.execute(service_query)
+                service = service_result.scalar_one_or_none()
+                apt_dict['service_name'] = service.name if service else None
+            
+            # Si no es walk-in, obtener nombre del cliente
+            if not apt.is_walk_in and apt.client_id:
+                client_query = select(User).where(User.id == apt.client_id)
+                client_result = await self.db.execute(client_query)
+                client = client_result.scalar_one_or_none()
+                if client and not apt.client_name:
+                    apt_dict['client_name'] = client.name
+            
+            appointments_today.append(apt_dict)
+        
+        # Próximas citas (próximos 7 días)
+        next_week = now + timedelta(days=7)
+        upcoming_query = (
+            select(Appointment)
+            .where(
+                Appointment.stylist_id == stylist_id,
+                Appointment.date > today_end,
+                Appointment.date <= next_week,
+                or_(
+                    Appointment.status == 'pending',
+                    Appointment.status == 'confirmed'
+                )
+            )
+            .order_by(Appointment.date)
+        )
+        result = await self.db.execute(upcoming_query)
+        upcoming_raw = result.scalars().all()
+        
+        upcoming_appointments = []
+        for apt in upcoming_raw:
+            apt_dict = apt.to_dict()
+            
+            # Obtener nombre del servicio
+            if apt.service_id:
+                service_query = select(Service).where(Service.id == apt.service_id)
+                service_result = await self.db.execute(service_query)
+                service = service_result.scalar_one_or_none()
+                apt_dict['service_name'] = service.name if service else None
+            
+            # Si no es walk-in, obtener nombre del cliente
+            if not apt.is_walk_in and apt.client_id:
+                client_query = select(User).where(User.id == apt.client_id)
+                client_result = await self.db.execute(client_query)
+                client = client_result.scalar_one_or_none()
+                if client and not apt.client_name:
+                    apt_dict['client_name'] = client.name
+            
+            upcoming_appointments.append(apt_dict)
+        
+        # Citas completadas este mes
+        month_start = datetime.combine(now.replace(day=1).date(), datetime.min.time())
+        completed_query = select(func.count(Appointment.id)).where(
+            Appointment.stylist_id == stylist_id,
+            Appointment.status == "completed",
+            Appointment.date >= month_start
+        )
+        result = await self.db.execute(completed_query)
+        completed_count = result.scalar()
+        
+        return {
+            "next_appointment": next_appointment,
+            "appointments_today": appointments_today,
+            "total_appointments_today": len(appointments_today),
+            "upcoming_appointments": upcoming_appointments,
+            "completed_this_month": completed_count
+        }
+
+    async def get_stylist_history(self, stylist_id: int) -> list[AppointmentInDB]:
+        """Obtener historial de citas del estilista (completadas, canceladas, no-show)"""
+        query = (
+            select(Appointment)
+            .where(
+                and_(
+                    Appointment.stylist_id == stylist_id,
+                    or_(
+                        Appointment.status == 'completed',
+                        Appointment.status == 'cancelled',
+                        Appointment.status == 'no-show'
+                    )
+                )
+            )
+            .order_by(Appointment.date.desc())
+        )
+        
+        result = await self.db.execute(query)
+        appointments = result.scalars().all()
+        
+        # Agregar nombres de servicio y cliente
+        appointments_with_details = []
+        for apt in appointments:
+            apt_dict = apt.to_dict()
+            
+            # Obtener nombre del servicio
+            if apt.service_id:
+                service_query = select(Service).where(Service.id == apt.service_id)
+                service_result = await self.db.execute(service_query)
+                service = service_result.scalar_one_or_none()
+                apt_dict['service_name'] = service.name if service else None
+            
+            # Si no es walk-in, obtener nombre del cliente
+            if not apt.is_walk_in and apt.client_id:
+                client_query = select(User).where(User.id == apt.client_id)
+                client_result = await self.db.execute(client_query)
+                client = client_result.scalar_one_or_none()
+                if client and not apt.client_name:
+                    apt_dict['client_name'] = client.name
+            
+            appointments_with_details.append(AppointmentInDB(**apt_dict))
+        
+        return appointments_with_details
+
+    async def get_client_history(self, client_id: int) -> list[AppointmentInDB]:
+        """Obtener historial de citas del cliente (completadas, canceladas, no-show)"""
+        query = (
+            select(Appointment)
+            .where(
+                and_(
+                    Appointment.client_id == client_id,
+                    or_(
+                        Appointment.status == 'completed',
+                        Appointment.status == 'cancelled',
+                        Appointment.status == 'no-show'
+                    )
+                )
+            )
+            .order_by(Appointment.date.desc())
+        )
+        
+        result = await self.db.execute(query)
+        appointments = result.scalars().all()
+        
+        # Agregar nombres de servicio y estilista
+        appointments_with_details = []
+        for apt in appointments:
+            apt_dict = apt.to_dict()
+            
+            # Obtener nombre del servicio
+            if apt.service_id:
+                service_query = select(Service).where(Service.id == apt.service_id)
+                service_result = await self.db.execute(service_query)
+                service = service_result.scalar_one_or_none()
+                apt_dict['service_name'] = service.name if service else None
+            
+            # Obtener nombre del estilista
+            if apt.stylist_id:
+                stylist_query = select(User).where(User.id == apt.stylist_id)
+                stylist_result = await self.db.execute(stylist_query)
+                stylist = stylist_result.scalar_one_or_none()
+                apt_dict['stylist_name'] = stylist.name if stylist else None
+            
+            appointments_with_details.append(AppointmentInDB(**apt_dict))
+        
+        return appointments_with_details
+
+    async def _get_next_appointment(self, stylist_id: int) -> Optional[AppointmentInDB]:
+        """Obtener la próxima cita del estilista"""
+        now = datetime.now()
+        
+        query = (
+            select(Appointment)
+            .where(
+                Appointment.stylist_id == stylist_id,
+                Appointment.date >= now,
+                or_(
+                    Appointment.status == 'pending',
+                    Appointment.status == 'confirmed'
+                )
+            )
+            .order_by(Appointment.date)
+            .limit(1)
+        )
+        
+        result = await self.db.execute(query)
+        appointment = result.scalar_one_or_none()
+        
+        if not appointment:
+            return None
+        
+        apt_dict = appointment.to_dict()
+        
+        # Obtener nombre del servicio
+        if appointment.service_id:
+            service_query = select(Service).where(Service.id == appointment.service_id)
+            service_result = await self.db.execute(service_query)
+            service = service_result.scalar_one_or_none()
+            apt_dict['service_name'] = service.name if service else None
+        
+        # Si no es walk-in, obtener nombre del cliente
+        if not appointment.is_walk_in and appointment.client_id:
+            client_query = select(User).where(User.id == appointment.client_id)
+            client_result = await self.db.execute(client_query)
+            client = client_result.scalar_one_or_none()
+            if client and not appointment.client_name:
+                apt_dict['client_name'] = client.name
+        
+        return AppointmentInDB(**apt_dict)
+
+    async def _check_availability(
+        self,
+        stylist_id: int,
+        appointment_date: datetime,
+        service_id: int,
+        exclude_appointment_id: Optional[int] = None
+    ) -> bool:
+        """Verificar si un horario está disponible"""
+        
+        # Obtener duración del servicio
+        service_query = select(Service).where(Service.id == service_id)
+        result = await self.db.execute(service_query)
+        service = result.scalar_one_or_none()
+        
+        if not service:
+            raise ValueError("Servicio no encontrado")
+        
+        service_duration = service.duration
+        appointment_end = appointment_date + timedelta(minutes=service_duration)
+        
+        # Buscar citas que se solapen
+        query = select(Appointment).where(
+            Appointment.stylist_id == stylist_id,
+            or_(
+                Appointment.status == 'pending',
+                Appointment.status == 'confirmed'
+            ),
+            Appointment.date < appointment_end
+        )
+        
+        if exclude_appointment_id:
+            query = query.where(Appointment.id != exclude_appointment_id)
+        
+        result = await self.db.execute(query)
+        existing_appointments = result.scalars().all()
+        
+        for apt in existing_appointments:
+            # Obtener duración del servicio de la cita existente
+            apt_service_query = select(Service).where(Service.id == apt.service_id)
+            apt_service_result = await self.db.execute(apt_service_query)
+            apt_service = apt_service_result.scalar_one_or_none()
+            
+            apt_duration = apt_service.duration if apt_service else 60
+            apt_end = apt.date + timedelta(minutes=apt_duration)
+            
+            # Verificar solapamiento
+            if appointment_date < apt_end and appointment_end > apt.date:
+                return False
+        
+        return True

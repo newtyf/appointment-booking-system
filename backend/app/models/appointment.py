@@ -14,7 +14,7 @@ class Appointment(Base):
     client_id: Mapped[Optional[int]] = mapped_column(
         Integer, 
         ForeignKey("users.id"), 
-        nullable=True  # ✅ Ahora puede ser NULL
+        nullable=True 
     )
     
     # Datos del cliente walk-in (solo si client_id es NULL)
@@ -25,7 +25,6 @@ class Appointment(Base):
     # Indica si es un cliente walk-in (sin cuenta) o registrado
     is_walk_in: Mapped[bool] = mapped_column(Boolean, default=False)
     
-    # Campos de antes jeje
     stylist_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"))
     service_id: Mapped[int] = mapped_column(Integer, ForeignKey("services.id"))
     date: Mapped[DateTime] = mapped_column(DateTime)
@@ -40,3 +39,22 @@ class Appointment(Base):
             return f"<Appointment(id={self.id}, walk-in='{self.client_name}', stylist_id={self.stylist_id}, date={self.date})>"
         else:
             return f"<Appointment(id={self.id}, client_id={self.client_id}, stylist_id={self.stylist_id}, date={self.date})>"
+    
+    def to_dict(self):
+        """Convertir el objeto Appointment a diccionario para serialización JSON"""
+        return {
+            'id': self.id,
+            'client_id': self.client_id,
+            'client_name': self.client_name,
+            'client_phone': self.client_phone,
+            'client_email': self.client_email,
+            'is_walk_in': self.is_walk_in,
+            'stylist_id': self.stylist_id,
+            'service_id': self.service_id,
+            'date': self.date.isoformat() if self.date else None,
+            'status': self.status,
+            'created_by': self.created_by,
+            'modified_by': self.modified_by,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }

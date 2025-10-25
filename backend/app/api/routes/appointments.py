@@ -45,6 +45,24 @@ async def list_my_appointments(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid role")
 
 
+
+@router.get("/my-appointments/history", response_model=list[AppointmentInDB])
+async def get_my_appointment_history(
+    appointment_service: Annotated[AppointmentService, Depends(get_appointment_service)],
+    current_user: Annotated[User, Depends(get_current_user)]
+):
+    """Obtener historial de citas (completadas, canceladas, no-show)"""
+    if current_user.role == "stylist":
+        return await appointment_service.get_stylist_history(current_user.id)
+    elif current_user.role == "client":
+        return await appointment_service.get_client_history(current_user.id)
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Only stylists and clients can view history"
+        )
+
+
 @router.get("/availability", response_model=dict)
 async def get_availability(
     date: str,
