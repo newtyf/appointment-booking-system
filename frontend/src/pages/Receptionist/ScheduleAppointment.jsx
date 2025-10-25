@@ -10,26 +10,17 @@ import {
 import appointmentService from "../../services/appointmentService";
 import serviceService from "../../services/serviceService";
 import userService from "../../services/userService";
-import { useCulqiCheckout } from "../../hooks/useCulqiCheckout";
 
 const ScheduleAppointment = () => {
-  const { openCheckout, errorCheckout } = useCulqiCheckout({
-    onSuccess: () => {
-      handleSubmit();
-      setLoading(true);
-    },
-    onError: (error) => {
-      setError(`Error en el pago: ${error}`);
-      setLoading(false);
-    },
-  });
-
   const [clients, setClients] = useState([]);
-  const [stylists, setStylists] = useState([]);
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [availability, setAvailability] = useState(null);
+  const [loadingAvailability, setLoadingAvailability] = useState(false);
+  const [selectedStylist, setSelectedStylist] = useState(null);
+  const [availableSlots, setAvailableSlots] = useState([]);
 
   const [formData, setFormData] = useState({
     client_id: "",
@@ -44,12 +35,6 @@ const ScheduleAppointment = () => {
     loadInitialData();
   }, []);
 
-  useEffect(() => {
-    if (errorCheckout) {
-      setError(errorCheckout);
-    }
-  }, [errorCheckout]);
-
   const loadInitialData = async () => {
     try {
       setLoading(true);
@@ -59,10 +44,8 @@ const ScheduleAppointment = () => {
       ]);
 
       const clientsList = usersData.filter((u) => u.role === "client");
-      const stylistsList = usersData.filter((u) => u.role === "stylist");
 
       setClients(clientsList);
-      setStylists(stylistsList);
       setServices(servicesData);
     } catch (err) {
       console.error("Error al cargar datos:", err);
@@ -72,7 +55,54 @@ const ScheduleAppointment = () => {
     }
   };
 
-  const handleSubmit = async () => {
+    // Cargar disponibilidad cuando se selecciona fecha y servicio
+  useEffect(() => {
+    if (formData.date && formData.service_id) {
+      fetchAvailability();
+    } else {
+      // Resetear disponibilidad si no hay fecha o servicio
+      setAvailability(null);
+      setSelectedStylist(null);
+      setAvailableSlots([]);
+      setFormData(prev => ({ ...prev, stylist_id: "", time: "" }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.date, formData.service_id]);
+
+  const fetchAvailability = async () => {
+    setLoadingAvailability(true);
+    setError("");
+    setAvailability(null);
+    setSelectedStylist(null);
+    setAvailableSlots([]);
+    setFormData(prev => ({ ...prev, stylist_id: "", time: "" }));
+
+    try {
+      const data = await appointmentService.getAvailability(
+        formData.date,
+        formData.service_id
+      );
+      setAvailability(data);
+    } catch (err) {
+      console.error("Error al cargar disponibilidad:", err);
+      setError("No se pudo cargar la disponibilidad");
+    } finally {
+      setLoadingAvailability(false);
+    }
+  };
+
+  const handleStylistSelect = (stylist) => {
+    setSelectedStylist(stylist);
+    setAvailableSlots(stylist.available_slots || []);
+    setFormData(prev => ({ 
+      ...prev, 
+      stylist_id: stylist.stylist_id.toString(),
+      time: "" // Resetear hora al cambiar estilista
+    }));
+  };
+
+    const handleSubmit = async (e) => {
+    e.preventDefault();
     setError("");
     setSuccess("");
 
@@ -156,17 +186,7 @@ const ScheduleAppointment = () => {
       {/* Form */}
       <div className='bg-white rounded-lg shadow-md p-8'>
         <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            openCheckout({
-              amount:
-                services.find((s) => s.id === parseInt(formData.service_id))
-                  .price * 100,
-              currency: "PEN",
-              description: "Pago de reserva",
-              email: formData.client_email || "",
-            });
-          }}
+          onSubmit={handleSubmit}
           className='space-y-6'
         >
           {/* Cliente */}
@@ -221,29 +241,6 @@ const ScheduleAppointment = () => {
             </select>
           </div>
 
-          {/* Estilista */}
-          <div>
-            <label className='block text-gray-700 font-semibold mb-2 flex items-center'>
-              <User className='h-5 w-5 mr-2 text-blue-600' />
-              Estilista <span className='text-red-500 ml-1'>*</span>
-            </label>
-            <select
-              value={formData.stylist_id}
-              onChange={(e) =>
-                setFormData({ ...formData, stylist_id: e.target.value })
-              }
-              className='w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'
-              required
-            >
-              <option value=''>Selecciona un estilista</option>
-              {stylists.map((stylist) => (
-                <option key={stylist.id} value={stylist.id}>
-                  {stylist.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
           {/* Fecha */}
           <div>
             <label className='block text-gray-700 font-semibold mb-2 flex items-center'>
@@ -263,7 +260,7 @@ const ScheduleAppointment = () => {
           </div>
 
           {/* Hora */}
-          <div>
+          {/* <div>
             <label className='block text-gray-700 font-semibold mb-2 flex items-center'>
               <Clock className='h-5 w-5 mr-2 text-blue-600' />
               Hora <span className='text-red-500 ml-1'>*</span>
@@ -277,7 +274,100 @@ const ScheduleAppointment = () => {
               className='w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'
               required
             />
-          </div>
+          </div> */}
+
+          {/* Estilista */}
+          {formData.date && formData.service_id && (
+            <div>
+              <label className='block text-gray-700 font-semibold mb-2 flex items-center'>
+                <User className='h-5 w-5 mr-2 text-blue-600' />
+                Estilista <span className='text-red-500 ml-1'>*</span>
+              </label>
+              
+              {loadingAvailability ? (
+                <div className='text-center py-6'>
+                  <div className='inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2'></div>
+                  <p className='text-gray-600 text-sm'>Cargando disponibilidad...</p>
+                </div>
+              ) : availability && availability.stylists && availability.stylists.length > 0 ? (
+                <div className='space-y-3'>
+                  {availability.stylists.map((stylist) => (
+                    <div
+                      key={stylist.stylist_id}
+                      onClick={() => stylist.available_slots.length > 0 && handleStylistSelect(stylist)}
+                      className={`border-2 rounded-lg p-4 transition-all ${
+                        selectedStylist?.stylist_id === stylist.stylist_id
+                          ? 'border-blue-500 bg-blue-50'
+                          : stylist.available_slots.length > 0
+                          ? 'border-gray-300 hover:border-blue-400 cursor-pointer'
+                          : 'border-gray-200 opacity-50 cursor-not-allowed'
+                      }`}
+                    >
+                      <div className='flex items-center justify-between'>
+                        <div className='flex items-center'>
+                          <div className={`rounded-full p-2 mr-3 ${
+                            selectedStylist?.stylist_id === stylist.stylist_id
+                              ? 'bg-blue-500'
+                              : 'bg-gray-300'
+                          }`}>
+                            <User className={`h-4 w-4 ${
+                              selectedStylist?.stylist_id === stylist.stylist_id
+                                ? 'text-white'
+                                : 'text-gray-600'
+                            }`} />
+                          </div>
+                          <div>
+                            <h4 className='font-semibold text-gray-800'>{stylist.stylist_name}</h4>
+                            <p className='text-sm text-gray-600'>
+                              {stylist.available_slots.length > 0 
+                                ? `${stylist.available_slots.length} horarios disponibles`
+                                : 'Sin disponibilidad'
+                              }
+                            </p>
+                          </div>
+                        </div>
+                        {selectedStylist?.stylist_id === stylist.stylist_id && (
+                          <CheckCircle className='h-5 w-5 text-blue-500' />
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : availability ? (
+                <div className='bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center'>
+                  <p className='text-yellow-800 text-sm'>No hay estilistas disponibles para esta fecha</p>
+                </div>
+              ) : (
+                <p className='text-gray-500 text-sm'>Selecciona una fecha y servicio para ver disponibilidad</p>
+              )}
+            </div>
+          )}
+
+          {/* Hora */}
+          {selectedStylist && availableSlots.length > 0 && (
+            <div>
+              <label className='block text-gray-700 font-semibold mb-2 flex items-center'>
+                <Clock className='h-5 w-5 mr-2 text-blue-600' />
+                Hora <span className='text-red-500 ml-1'>*</span>
+              </label>
+              <div className='grid grid-cols-3 md:grid-cols-4 gap-2'>
+                {availableSlots.map((timeSlot) => (
+                  <button
+                    key={timeSlot}
+                    type='button'
+                    onClick={() => setFormData(prev => ({ ...prev, time: timeSlot }))}
+                    className={`py-2 px-3 rounded-lg text-sm font-semibold transition-all ${
+                      formData.time === timeSlot
+                        ? 'bg-blue-600 text-white shadow-md'
+                        : 'bg-gray-100 text-gray-700 hover:bg-blue-100 hover:text-blue-600'
+                    }`}
+                  >
+                    {timeSlot}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Botones */}
           <div className='flex gap-4 pt-4'>
