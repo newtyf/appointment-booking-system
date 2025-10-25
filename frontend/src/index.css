@@ -1,1 +1,43 @@
 @import "tailwindcss";
+
+/* === MODO DE ALTO CONTRASTE === */
+.high-contrast {
+  background-color: #121212 !important;
+  color: #ffffff !important;
+}
+
+/* Textos importantes */
+.high-contrast h1,
+.high-contrast h2,
+.high-contrast h3 {
+  color: #c084fc !important; /* púrpura claro accesible */
+}
+
+/* Botones */
+.high-contrast button,
+.high-contrast a.button,
+.high-contrast .btn {
+  background-color: #ffff00 !important; /* amarillo brillante */
+  color: #000 !important;
+  border: none !important;
+}
+
+/* Bordes y contenedores */
+.high-contrast .card,
+.high-contrast .shadow-lg,
+.high-contrast .bg-white {
+  background-color: #1e1e1e !important;
+  color: #ffffff !important;
+  border: 2px solid #c084fc !important;
+}
+
+/* Links */
+.high-contrast a {
+  color: #ffff00 !important;
+  text-decoration: underline !important;
+}
+
+/* Imágenes: más visibles */
+.high-contrast img {
+  filter: brightness(0.8) contrast(1.2);
+}

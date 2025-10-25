@@ -1,15 +1,41 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, use } from "react";
 import { PersonStanding, Type, Contrast, Volume2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const AccessibilityButton = () => {
   const [open, setOpen] = useState(false);
   const [shouldReopen, setShouldReopen] = useState(false);
-  const [position, setPosition] = useState({ vertical: "up", horizontal: "right" });
+  const [position, setPosition] = useState({
+    vertical: "up",
+    horizontal: "right",
+  });
   const [isDragging, setIsDragging] = useState(false);
   const [hoverEnabled, setHoverEnabled] = useState(true);
   const buttonRef = useRef(null);
   const constraintsRef = useRef(null);
+
+  const [highContrast, setHighContrast] = useState(() => {
+    return localStorage.getItem("highContrast") === "true";
+  });
+
+  useEffect(() => {
+    if (highContrast) {
+      document.body.classList.add("high-contrast");
+    } else {
+      document.body.classList.remove("high-contrast");
+    }
+  }, [highContrast]);
+
+  const toggleHighContrast = () => {
+    const newValue = !highContrast;
+    setHighContrast(newValue);
+    localStorage.setItem("highContrast", String(newValue));
+    if (newValue) {
+      document.body.classList.add("high-contrast");
+    } else {
+      document.body.classList.remove("high-contrast");
+    }
+  };
 
   useEffect(() => {
     const handleResize = () => {
@@ -39,7 +65,10 @@ const AccessibilityButton = () => {
   };
 
   return (
-    <div ref={constraintsRef} className="fixed inset-0 z-50 pointer-events-none">
+    <div
+      ref={constraintsRef}
+      className="fixed inset-0 z-50 pointer-events-none"
+    >
       <motion.div
         ref={buttonRef}
         className="absolute bottom-6 right-6 pointer-events-auto"
@@ -100,8 +129,18 @@ const AccessibilityButton = () => {
                 <button className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100">
                   <Type size={18} /> Increase Text
                 </button>
-                <button className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100">
-                  <Contrast size={18} /> High Contrast
+                <button
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100"
+                  onClick={() => {
+                    setHighContrast(!highContrast);
+                    document.body.classList.toggle(
+                      "high-contrast",
+                      !highContrast
+                    );
+                  }}
+                >
+                  <Contrast size={18} />{" "}
+                  {highContrast ? "Disable Contrast" : "High Contrast"}
                 </button>
                 <button className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100">
                   <Volume2 size={18} /> Read Aloud

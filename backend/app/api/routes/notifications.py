@@ -27,6 +27,6 @@ def send_test_email():
     email_service.send_email(
         to_email="osquicastro05@gmail.com",
         subject="Prueba de notificación",
-        body="Este es un correo de prueba enviado desde FastAPI 🚀"
+        body="Este es un correo de prueba enviado desde FastAPI 🚀 - este mensaje se envía desde el endpoint /notifications/send"
     )
     return {"status": "enviado"}
