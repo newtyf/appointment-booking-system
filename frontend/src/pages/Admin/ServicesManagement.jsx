@@ -9,10 +9,12 @@ const ServicesManagement = () => {
   const [nombreEditado, setNombreEditado] = useState("");
   const [duracionEditada, setDuracionEditada] = useState("");
   const [descripcionEditada, setDescripcionEditada] = useState("");
+  const [precioEditado, setPrecioEditado] = useState("");
 
   const [nuevoNombre, setNuevoNombre] = useState("");
   const [nuevaDuracion, setNuevaDuracion] = useState("");
   const [nuevaDescripcion, setNuevaDescripcion] = useState("");
+  const [nuevoPrecio, setNuevoPrecio] = useState("");
 
   const [filtroBusqueda, setFiltroBusqueda] = useState("");
   const [services, setServices] = useState([]);
@@ -38,7 +40,7 @@ const ServicesManagement = () => {
   };
 
   const handleAgregarServicio = async () => {
-    if (!nuevoNombre || !nuevaDuracion || !nuevaDescripcion) {
+    if (!nuevoNombre || !nuevaDuracion || !nuevaDescripcion || !nuevoPrecio) {
       alert('Por favor completa todos los campos');
       return;
     }
@@ -49,6 +51,7 @@ const ServicesManagement = () => {
         name: nuevoNombre,
         duration_min: parseInt(nuevaDuracion),
         description: nuevaDescripcion,
+        price: parseFloat(nuevoPrecio),
       };
 
       const servicioCreado = await serviceService.createService(nuevoServicio);
@@ -58,6 +61,7 @@ const ServicesManagement = () => {
       setNuevoNombre("");
       setNuevaDuracion("");
       setNuevaDescripcion("");
+      setNuevoPrecio("");
       
       alert('Servicio creado exitosamente');
     } catch (err) {
@@ -69,7 +73,7 @@ const ServicesManagement = () => {
   };
 
   const handleEditarServicio = async () => {
-    if (!nombreEditado || !duracionEditada || !descripcionEditada) {
+    if (!nombreEditado || !duracionEditada || !descripcionEditada || !precioEditado) {
       alert('Por favor completa todos los campos');
       return;
     }
@@ -80,6 +84,7 @@ const ServicesManagement = () => {
         name: nombreEditado,
         duration_min: parseInt(duracionEditada),
         description: descripcionEditada,
+        price: parseFloat(precioEditado),
       };
 
       const resultado = await serviceService.updateService(
@@ -173,6 +178,7 @@ const ServicesManagement = () => {
               setNuevoNombre("");
               setNuevaDuracion("");
               setNuevaDescripcion("");
+              setNuevoPrecio("");
             }}
             disabled={loading}
             className='bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200 disabled:bg-gray-400'
@@ -197,6 +203,9 @@ const ServicesManagement = () => {
                   </th>
                   <th className='py-3 px-4 border-b text-left text-xs font-medium text-gray-500 uppercase'>
                     Duración (min)
+                  </th>
+                  <th className='py-3 px-4 border-b text-left text-xs font-medium text-gray-500 uppercase'>
+                    Precio
                   </th>
                   <th className='py-3 px-4 border-b text-left text-xs font-medium text-gray-500 uppercase'>
                     Descripción
@@ -227,6 +236,11 @@ const ServicesManagement = () => {
                         </span>
                       </td>
                       <td className='py-3 px-4 border-b text-gray-700'>
+                        <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-sm font-medium">
+                          S/ {service.price ? service.price.toFixed(2) : '0.00'}
+                        </span>
+                      </td>
+                      <td className='py-3 px-4 border-b text-gray-700'>
                         {service.description}
                       </td>
                       <td className='py-3 px-4 border-b text-center text-sm font-medium whitespace-nowrap'>
@@ -247,6 +261,7 @@ const ServicesManagement = () => {
                             setNombreEditado(service.name);
                             setDuracionEditada(service.duration_min);
                             setDescripcionEditada(service.description);
+                            setPrecioEditado(service.price || 0);
                           }}
                           className='text-purple-600 hover:text-purple-900 mx-1'
                           title="Editar"
@@ -292,6 +307,7 @@ const ServicesManagement = () => {
               <p><strong>ID:</strong> {servicioSeleccionado.id}</p>
               <p><strong>Nombre:</strong> {servicioSeleccionado.name}</p>
               <p><strong>Duración:</strong> {servicioSeleccionado.duration_min} min</p>
+              <p><strong>Precio:</strong> S/ {servicioSeleccionado.price ? servicioSeleccionado.price.toFixed(2) : '0.00'}</p>
               <p><strong>Descripción:</strong> {servicioSeleccionado.description}</p>
             </div>
             <div className='mt-6 text-right'>
@@ -330,6 +346,18 @@ const ServicesManagement = () => {
                 value={duracionEditada}
                 onChange={(e) => setDuracionEditada(e.target.value)}
                 className='w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-pink-500'
+              />
+            </div>
+
+            <div className='mb-4'>
+              <label className='block text-gray-700 font-medium mb-2'>Precio (S/)</label>
+              <input
+                type='number'
+                step='0.01'
+                value={precioEditado}
+                onChange={(e) => setPrecioEditado(e.target.value)}
+                className='w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-pink-500'
+                placeholder='Ej: 50.00'
               />
             </div>
 
@@ -423,6 +451,18 @@ const ServicesManagement = () => {
                 onChange={(e) => setNuevaDuracion(e.target.value)}
                 className='w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-pink-500'
                 placeholder='Ej: 30'
+              />
+            </div>
+
+            <div className='mb-4'>
+              <label className='block text-gray-700 font-medium mb-2'>Precio (S/)</label>
+              <input
+                type='number'
+                step='0.01'
+                value={nuevoPrecio}
+                onChange={(e) => setNuevoPrecio(e.target.value)}
+                className='w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-pink-500'
+                placeholder='Ej: 50.00'
               />
             </div>
 
