@@ -12,7 +12,7 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(length=50), unique=True, index=True)
     phone: Mapped[str] = mapped_column(String(length=20))
     hashed_password: Mapped[str] = mapped_column(String(length=100))
-    role: Mapped[str] = mapped_column(String(length=20), default="user") # Cambiado a str
+    role: Mapped[str] = mapped_column(String(length=20), default="client") # Cambiado a str
     created_at: Mapped[DateTime] = mapped_column(DateTime, default=func.now())
     updated_at: Mapped[DateTime] = mapped_column(DateTime, default=func.now(), onupdate=func.now())
 

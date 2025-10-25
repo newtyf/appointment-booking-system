@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db_session
 from app.models.user import User
-from app.services import AuthService, RoleChecker, UserService, AppointmentService, ServiceService
+from app.services import AuthService, RoleChecker, UserService, AppointmentService, ServiceService, NotificationService
 
 http_bearer_scheme = HTTPBearer()
 
@@ -19,10 +19,13 @@ def get_auth_service(
 ) -> AuthService:
     return AuthService(db, user_service)
 
-def get_appointment_service(db: AsyncSession = Depends(get_db_session)) -> AppointmentService:
-    return AppointmentService(db)
+def get_notification_service(db: Annotated[AsyncSession, Depends(get_db_session)]) -> NotificationService:
+    return NotificationService(db)
 
-def get_service_service(db: AsyncSession = Depends(get_db_session)) -> ServiceService:
+def get_appointment_service(db: Annotated[AsyncSession, Depends(get_db_session)], notification_service: Annotated[NotificationService, Depends(get_notification_service)]) -> AppointmentService:
+    return AppointmentService(db, notification_service)
+
+def get_service_service(db: Annotated[AsyncSession, Depends(get_db_session)]) -> ServiceService:
     return ServiceService(db)
 
 # Dependencia para validar si el usuario está autenticado y obtener su información

@@ -15,10 +15,22 @@ async def create_and_send_notification(
     db: Annotated = Depends(get_db_session)
 ):
     notif_service = NotificationService(db)
-    notif = await notif_service.create_notification(notification_in)
+    
+    # Crear notificación usando parámetros individuales
+    notif = await notif_service.create_notification(
+        appointment_id=notification_in.appointment_id,
+        user_id=notification_in.user_id,
+        type=notification_in.type,
+        channel=notification_in.channel,
+        status=notification_in.status,
+        title=notification_in.title,
+        body=notification_in.body
+    )
 
-    # Enviar correo en segundo plano
-    background_tasks.add_task(notif_service.send_email_notification, notif)
+    # Enviar correo en segundo plano si es de tipo email
+    if notification_in.channel == "email":
+        background_tasks.add_task(notif_service.send_email_notification, notif.id)
+    
     return notif
 
 @router.get("/send")

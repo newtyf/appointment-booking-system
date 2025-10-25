@@ -14,8 +14,7 @@ async def register_user_endpoint(
     user_create: UserCreate,
     auth_service: Annotated[AuthService, Depends(get_auth_service)]
 ):
-    user_create.role = "client"
-    
+
     user = await auth_service.register_user(user_create)
     if user is None:
         raise HTTPException(

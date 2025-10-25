@@ -13,10 +13,14 @@ from app.schemas.appointment import (
     AppointmentCreateWalkIn
 )
 
+from app.services.notification_service import NotificationService
+
 
 class AppointmentService:
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession, notification_service: NotificationService):
         self.db = db
+        self.notification_service = notification_service
+
 
     async def _validate_datetime(self, appointment_date: datetime):
         """Validar que la fecha de la cita sea válida"""
@@ -172,6 +176,19 @@ class AppointmentService:
         self.db.add(new_appointment)
         await self.db.commit()
         await self.db.refresh(new_appointment)
+
+        # Enviar notificaciones (email y web) si hay un cliente registrado
+        if new_appointment.client_id:
+            await self.notification_service.create_and_send_notification(
+                appointment_id=new_appointment.id,
+                user_id=new_appointment.client_id,
+                type="reservado"
+            )
+            # Refrescar el appointment después de las notificaciones
+
+        await self.db.commit();
+        await self.db.refresh(new_appointment)
+
         return new_appointment
 
     async def create_appointment_for_client(
@@ -210,6 +227,16 @@ class AppointmentService:
         )
         
         self.db.add(new_appointment)
+        await self.db.commit()
+        await self.db.refresh(new_appointment)
+
+        # Crear y enviar notificaciones (email y web) de reserva
+        await self.notification_service.create_and_send_notification(
+            appointment_id=new_appointment.id,
+            user_id=client_id,
+            type="reservado"
+        )
+
         await self.db.commit()
         await self.db.refresh(new_appointment)
         return new_appointment
@@ -322,6 +349,18 @@ class AppointmentService:
         appointment.modified_by = modified_by
         
         await self.db.commit()
+        await self.db.refresh(appointment)
+        
+        # Enviar notificaciones (email y web) si hay un cliente registrado y es confirmación o cancelación
+        if appointment.client_id and status in ['confirmed', 'cancelled']:
+            notification_type = "confirmado" if status == "confirmed" else "cancelado"
+            await self.notification_service.create_and_send_notification(
+                appointment_id=appointment.id,
+                user_id=appointment.client_id,
+                type=notification_type
+            )
+            await self.db.commit();
+        
         await self.db.refresh(appointment)
         return appointment
 

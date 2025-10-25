@@ -90,7 +90,10 @@ async def create_appointment(
         appointment_create.created_by = current_user.id
         appointment_create.modified_by = current_user.id
         
-        return await appointment_service.create_appointment(appointment_create)
+        appointment = await appointment_service.create_appointment(appointment_create)
+
+        return appointment
+
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
