@@ -139,26 +139,26 @@ const StylistDashboard = () => {
         </div>
       </div>
 
-      {/* Próxima Cita */}
+      {/* Próxima Cita  */}
       {dashboard?.next_appointment && (
         <div className="bg-gradient-to-r from-yellow-400 to-orange-500 rounded-lg shadow-lg p-6 text-white">
           <h2 className="text-2xl font-bold mb-4 flex items-center">
             <TrendingUp className="h-6 w-6 mr-2" />
             Próxima Cita
           </h2>
-          <div className="bg-white bg-opacity-20 rounded-lg p-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white rounded-lg p-6 shadow-md">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
-                <p className="text-yellow-100 text-sm font-medium mb-1">Cliente</p>
-                <p className="text-xl font-bold">{dashboard.next_appointment.client_name}</p>
+                <p className="text-gray-500 text-sm font-semibold mb-2">Cliente</p>
+                <p className="text-2xl font-bold text-gray-800">{dashboard.next_appointment.client_name}</p>
               </div>
               <div>
-                <p className="text-yellow-100 text-sm font-medium mb-1">Servicio</p>
-                <p className="text-xl font-bold">{dashboard.next_appointment.service_name}</p>
+                <p className="text-gray-500 text-sm font-semibold mb-2">Servicio</p>
+                <p className="text-2xl font-bold text-gray-800">{dashboard.next_appointment.service_name}</p>
               </div>
               <div>
-                <p className="text-yellow-100 text-sm font-medium mb-1">Hora</p>
-                <p className="text-xl font-bold">{formatTime(dashboard.next_appointment.date)}</p>
+                <p className="text-gray-500 text-sm font-semibold mb-2">Hora</p>
+                <p className="text-3xl font-bold text-orange-600">{formatTime(dashboard.next_appointment.date)}</p>
               </div>
             </div>
           </div>

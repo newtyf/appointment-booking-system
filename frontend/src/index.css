@@ -1,1 +1,68 @@
 @import "tailwindcss";
+
+/* ============================================
+   ALTO CONTRASTE
+   ============================================ */
+[data-high-contrast="true"] body {
+  background-color: #000 !important;
+  color: #FFFF00 !important;
+}
+
+[data-high-contrast="true"] div:not([class*="accessibility"]),
+[data-high-contrast="true"] section,
+[data-high-contrast="true"] header,
+[data-high-contrast="true"] main {
+  background-color: #000 !important;
+  color: #FFFF00 !important;
+}
+
+[data-high-contrast="true"] a {
+  color: #00FF00 !important;
+  text-decoration: underline !important;
+  font-weight: bold !important;
+}
+
+[data-high-contrast="true"] button:not(.accessibility-panel *):not(.accessibility-button) {
+  background-color: #FFFFFF !important;
+  color: #000000 !important;
+  border: 3px solid #FFFF00 !important;
+}
+
+/* Proteger panel */
+[data-high-contrast="true"] .accessibility-panel {
+  background-color: #2d2d2d !important;
+  color: #ffffff !important;
+  border: 3px solid #60a5fa !important;
+}
+
+[data-high-contrast="true"] .accessibility-panel * {
+  color: #ffffff !important;
+}
+
+[data-high-contrast="true"] .accessibility-button {
+  background-color: #0066FF !important;
+  border: 3px solid #FFFFFF !important;
+}
+
+/* ============================================
+   MODO OSCURO
+   ============================================ */
+[data-dark-mode="true"] body {
+  background-color: #1a1a1a !important;
+  color: #ffffff !important;
+}
+
+[data-dark-mode="true"] .bg-white {
+  background-color: #2d2d2d !important;
+}
+
+[data-dark-mode="true"] .bg-gray-50,
+[data-dark-mode="true"] .bg-gray-100 {
+  background-color: #2d2d2d !important;
+}
+
+[data-dark-mode="true"] .text-gray-600,
+[data-dark-mode="true"] .text-gray-700,
+[data-dark-mode="true"] .text-gray-800 {
+  color: #e0e0e0 !important;
+}
