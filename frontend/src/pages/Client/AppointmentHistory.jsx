@@ -22,10 +22,12 @@ const AppointmentHistory = () => {
 
   useEffect(() => {
     fetchAppointments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     filterAppointments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appointments, searchTerm, filterStatus]);
 
   const fetchAppointments = async () => {
@@ -35,9 +37,12 @@ const AppointmentHistory = () => {
     try {
       const data = await appointmentService.getMyAppointments();
       
-      // Filtrar solo citas pasadas
+      // Filtrar solo citas pasadas (por fecha o por status final)
       const now = new Date();
-      const pastAppointments = data.filter(apt => new Date(apt.date) < now);
+      const pastAppointments = data.filter(apt => {
+        const appointmentDate = new Date(apt.date);
+        return appointmentDate < now || ['completed', 'cancelled', 'no-show'].includes(apt.status);
+      });
       
       setAppointments(pastAppointments);
       calculateStats(pastAppointments);

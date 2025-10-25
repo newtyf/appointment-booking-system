@@ -15,6 +15,7 @@ const StylistHistory = () => {
 
   useEffect(() => {
     filterHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [history, searchTerm]);
 
   const loadHistory = async () => {
@@ -22,8 +23,16 @@ const StylistHistory = () => {
     setError('');
 
     try {
-      const data = await appointmentService.getMyAppointmentHistory();
-      setHistory(data);
+      const data = await appointmentService.getMyAppointments();
+      
+      // Filtrar solo citas pasadas (completed, cancelled, no-show)
+      const now = new Date();
+      const pastAppointments = data.filter(apt => {
+        const appointmentDate = new Date(apt.date);
+        return appointmentDate < now || ['completed', 'cancelled', 'no-show'].includes(apt.status);
+      });
+      
+      setHistory(pastAppointments);
     } catch (err) {
       console.error('Error al cargar historial:', err);
       setError('No se pudo cargar el historial');
@@ -34,7 +43,9 @@ const StylistHistory = () => {
 
   const filterHistory = () => {
     if (!searchTerm) {
-      setFilteredHistory(history);
+      // Ordenar por fecha descendente (más reciente primero)
+      const sorted = [...history].sort((a, b) => new Date(b.date) - new Date(a.date));
+      setFilteredHistory(sorted);
       return;
     }
 
@@ -43,7 +54,9 @@ const StylistHistory = () => {
       appointment.service_name?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    setFilteredHistory(filtered);
+    // Ordenar por fecha descendente (más reciente primero)
+    const sorted = filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+    setFilteredHistory(sorted);
   };
 
   const formatDate = (dateString) => {

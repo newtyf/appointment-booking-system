@@ -71,12 +71,6 @@ const appointmentService = {
     const response = await api.get('/dashboard');
     return response.data;
   },
-
-  // ⭐ NUEVO: Obtener historial de citas (completadas, canceladas, no-show)
-  getMyAppointmentHistory: async () => {
-    const response = await api.get('/appointments/my-appointments/history');
-    return response.data;
-  },
 };
 
 export default appointmentService;
