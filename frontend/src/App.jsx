@@ -1,11 +1,11 @@
-import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 
 import Login from "./pages/Auth/Login.jsx";
 import Register from "./pages/Auth/Register.jsx";
 
 import ClientDashboard from "./pages/Client/ClientDashboard.jsx";
 import MyAppointments from "./pages/Client/MyAppointments.jsx";
-import ClientScheduleAppointment from "./pages/Client/ScheduleAppointment.jsx"; // ← Renombrado
+import ClientScheduleAppointment from "./pages/Client/ScheduleAppointment.jsx";
 import AppointmentHistory from "./pages/Client/AppointmentHistory.jsx";
 
 import AdminDashboard from "./pages/Admin/AdminDashboard.jsx";
@@ -16,29 +16,21 @@ import AppointmentsManagement from "./pages/Admin/AppointmentsManagement.jsx";
 
 import ReceptionistDashboard from "./pages/Receptionist/ReceptionistDashboard.jsx";
 import AppointmentsView from "./pages/Receptionist/AppointmentsView.jsx";
-import ReceptionistScheduleAppointment from "./pages/Receptionist/ScheduleAppointment.jsx"; // ← Renombrado
+import ReceptionistScheduleAppointment from "./pages/Receptionist/ScheduleAppointment.jsx";
 import WalkInAppointment from "./pages/Receptionist/WalkInAppointment.jsx";
 import ClientsView from "./pages/Receptionist/ClientsView.jsx";
 
 import StylistDashboard from "./pages/Stylist/StylistDashboard.jsx";
 import StylistAppointments from "./pages/Stylist/StylistAppointments.jsx";
 import StylistHistory from "./pages/Stylist/StylistHistory.jsx";
-// import UsersManagement from "./pages/Client/UsersManagement.jsx";
-import AccessibilityButton from "./components/AccessibilityButton.jsx";
 
 import Home from "./pages/Home/index.jsx";
 import InsideLayout from "./layouts/InsideLayout.jsx";
 import LandingPage from "./pages/Landing/LandingPage.jsx";
 
+import { AccessibilityButton } from './components/Accessibility';
+
 const App = () => {
-  const location = useLocation();
-
-  // colocar las rutas donde se mostrara el boton si quieren que este en el dashboard agregar '/dashboard' y asi
-  const showButtonRoutes = ["/"];
-
-  // 🔸 Verifica si la ruta actual está en la lista
-  const shouldShowButton = showButtonRoutes.includes(location.pathname);
-
   const ProtectedRoute = () => {
     const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
 
@@ -51,6 +43,9 @@ const App = () => {
 
   return (
     <>
+      {/* Botón de accesibilidad visible en TODA la aplicación */}
+      <AccessibilityButton />
+      
       <Routes>
         {/* Rutas públicas */}
         <Route path='/' element={<LandingPage />} />
@@ -109,9 +104,6 @@ const App = () => {
         {/* Redirect a home si ruta no existe */}
         <Route path='*' element={<Navigate to='/' replace />} />
       </Routes>
-
-      {/* Mostrar el botón solo en las rutas permitidas */}
-      {shouldShowButton && <AccessibilityButton />}
     </>
   );
 };
