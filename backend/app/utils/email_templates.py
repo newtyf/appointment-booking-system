@@ -9,7 +9,7 @@ def generate_appointment_email_html(
 ) -> str:
     """
     Genera el HTML del correo con estilos similares al frontend.
-    
+
     Args:
         user_name: Nombre del usuario destinatario
         notification_type: Tipo de notificación (confirmacion, cancelacion, recordatorio)
@@ -17,11 +17,11 @@ def generate_appointment_email_html(
             - service_name: Nombre del servicio
             - stylist_name: Nombre del estilista
             - date: Fecha de la cita (datetime o string)
-    
+
     Returns:
         String con el HTML formateado del email
     """
-    
+
     # Determinar el color y título según el tipo de notificación
     type_config = {
         "reservado": {
@@ -53,9 +53,9 @@ def generate_appointment_email_html(
             "message": "Te recordamos tu próxima cita. ¡Nos vemos pronto!"
         }
     }
-    
+
     config = type_config.get(notification_type, type_config["reservado"])
-    
+
     # Mensajes adicionales personalizados según el tipo
     additional_message = {
         "reservado": "Un miembro de nuestro equipo revisará tu solicitud y pronto recibirás la confirmación.",
@@ -63,20 +63,21 @@ def generate_appointment_email_html(
         "cancelado": "Si deseas reprogramar tu cita, por favor contáctanos. Estaremos encantados de atenderte en otra fecha.",
         "recordatorio": "Si tienes alguna pregunta o necesitas hacer cambios, no dudes en contactarnos."
     }
-    
+
     # Formatear la fecha
     try:
         if isinstance(appointment_data["date"], str):
-            date_obj = datetime.fromisoformat(appointment_data["date"].replace('Z', '+00:00'))
+            date_obj = datetime.fromisoformat(
+                appointment_data["date"].replace('Z', '+00:00'))
         else:
             date_obj = appointment_data["date"]
-        
+
         formatted_date = date_obj.strftime("%d de %B de %Y")
         formatted_time = date_obj.strftime("%I:%M %p")
     except:
         formatted_date = str(appointment_data.get("date", ""))
         formatted_time = ""
-    
+
     html = f"""
     <!DOCTYPE html>
     <html lang="es">
@@ -204,5 +205,5 @@ def generate_appointment_email_html(
     </body>
     </html>
     """
-    
+
     return html

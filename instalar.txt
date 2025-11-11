@@ -1,1 +1,0 @@
-instalar "npm install framer-motion" en el fronted

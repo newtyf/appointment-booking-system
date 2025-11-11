@@ -36,3 +36,5 @@ dist/
 *.egg-info/
 
 app/static/*
+
+.sonar
