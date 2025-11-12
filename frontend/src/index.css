@@ -2,67 +2,220 @@
 
 /* ============================================
    ALTO CONTRASTE
+   Estrategia: Hereda modo oscuro + texto amarillo
    ============================================ */
+
+/* HEREDAR TODOS LOS ESTILOS DE MODO OSCURO */
 [data-high-contrast="true"] body {
-  background-color: #000 !important;
-  color: #FFFF00 !important;
+  background-color: #1a1a1a !important;
+  color: #ffffff !important;
 }
 
-[data-high-contrast="true"] div:not([class*="accessibility"]),
-[data-high-contrast="true"] section,
-[data-high-contrast="true"] header,
-[data-high-contrast="true"] main {
-  background-color: #000 !important;
-  color: #FFFF00 !important;
-}
-
-[data-high-contrast="true"] a {
-  color: #00FF00 !important;
-  text-decoration: underline !important;
-  font-weight: bold !important;
-}
-
-[data-high-contrast="true"] button:not(.accessibility-panel *):not(.accessibility-button) {
-  background-color: #FFFFFF !important;
-  color: #000000 !important;
-  border: 3px solid #FFFF00 !important;
-}
-
-/* Proteger panel */
-[data-high-contrast="true"] .accessibility-panel {
+[data-high-contrast="true"] [class*="bg-white"],
+[data-high-contrast="true"] .bg-white {
   background-color: #2d2d2d !important;
   color: #ffffff !important;
-  border: 3px solid #60a5fa !important;
+}
+
+[data-high-contrast="true"] [class*="bg-gray-50"],
+[data-high-contrast="true"] [class*="bg-gray-100"],
+[data-high-contrast="true"] .bg-gray-50,
+[data-high-contrast="true"] .bg-gray-100 {
+  background-color: #2d2d2d !important;
+  color: #ffffff !important;
+}
+
+[data-high-contrast="true"] [class*="border-gray"] {
+  border-color: #404040 !important;
+}
+
+[data-high-contrast="true"] input,
+[data-high-contrast="true"] textarea,
+[data-high-contrast="true"] select {
+  background-color: #2d2d2d !important;
+  color: #ffffff !important;
+  border-color: #404040 !important;
+}
+
+[data-high-contrast="true"] input:hover,
+[data-high-contrast="true"] textarea:hover,
+[data-high-contrast="true"] select:hover {
+  border-color: #606060 !important;
+}
+
+/* SOBRESCRIBIR CON TEXTO AMARILLO PARA ALTO CONTRASTE */
+[data-high-contrast="true"] h1:not(.accessibility-panel *),
+[data-high-contrast="true"] h2:not(.accessibility-panel *),
+[data-high-contrast="true"] h3:not(.accessibility-panel *),
+[data-high-contrast="true"] h4:not(.accessibility-panel *),
+[data-high-contrast="true"] h5:not(.accessibility-panel *),
+[data-high-contrast="true"] h6:not(.accessibility-panel *),
+[data-high-contrast="true"] p:not(.accessibility-panel *),
+[data-high-contrast="true"] span:not(.accessibility-panel *),
+[data-high-contrast="true"] label:not(.accessibility-panel *),
+[data-high-contrast="true"] li:not(.accessibility-panel *),
+[data-high-contrast="true"] td:not(.accessibility-panel *),
+[data-high-contrast="true"] th:not(.accessibility-panel *) {
+  color: #FFFF00 !important;
+}
+
+[data-high-contrast="true"] [class*="text-gray-600"]:not(.accessibility-panel *),
+[data-high-contrast="true"] [class*="text-gray-700"]:not(.accessibility-panel *),
+[data-high-contrast="true"] [class*="text-gray-800"]:not(.accessibility-panel *),
+[data-high-contrast="true"] [class*="text-gray-900"]:not(.accessibility-panel *),
+[data-high-contrast="true"] .text-gray-600:not(.accessibility-panel *),
+[data-high-contrast="true"] .text-gray-700:not(.accessibility-panel *),
+[data-high-contrast="true"] .text-gray-800:not(.accessibility-panel *),
+[data-high-contrast="true"] .text-gray-900:not(.accessibility-panel *) {
+  color: #FFFF00 !important;
+}
+
+/* Enlaces en verde brillante */
+[data-high-contrast="true"] a:not(.accessibility-panel *) {
+  color: #00FF00 !important;
+  text-decoration: underline !important;
+}
+
+[data-high-contrast="true"] a:not(.accessibility-panel *):hover {
+  color: #00FFFF !important;
+}
+
+/* PROTEGER PANEL DE ACCESIBILIDAD */
+[data-high-contrast="true"] .accessibility-panel {
+  background-color: #2d2d2d !important;
+  border: 3px solid #FFFF00 !important;
 }
 
 [data-high-contrast="true"] .accessibility-panel * {
   color: #ffffff !important;
 }
 
+[data-high-contrast="true"] .accessibility-panel button {
+  background-color: #444444 !important;
+  color: #ffffff !important;
+  border: 2px solid #60a5fa !important;
+}
+
+[data-high-contrast="true"] .accessibility-panel button:hover {
+  background-color: #555555 !important;
+}
+
 [data-high-contrast="true"] .accessibility-button {
   background-color: #0066FF !important;
-  border: 3px solid #FFFFFF !important;
+  color: #FFFFFF !important;
+  border: 4px solid #FFFF00 !important;
+}
+
+[data-high-contrast="true"] .accessibility-button svg {
+  color: #FFFFFF !important;
 }
 
 /* ============================================
-   MODO OSCURO
+   PROTEGER PANEL DE ACCESIBILIDAD
+   Prioridad máxima para mantener su esquema de colores
+   ============================================ */
+
+/* Panel y todos sus hijos mantienen colores oscuros */
+[data-high-contrast="true"] .accessibility-panel {
+  background-color: #2d2d2d !important;
+  border: 3px solid #FFFF00 !important;
+}
+
+[data-high-contrast="true"] .accessibility-panel *,
+[data-high-contrast="true"] .accessibility-panel div,
+[data-high-contrast="true"] .accessibility-panel span,
+[data-high-contrast="true"] .accessibility-panel p,
+[data-high-contrast="true"] .accessibility-panel h3 {
+  background-color: transparent !important;
+  color: #ffffff !important;
+}
+
+/* Botones dentro del panel */
+[data-high-contrast="true"] .accessibility-panel button {
+  background-color: #444444 !important;
+  color: #ffffff !important;
+  border: 2px solid #60a5fa !important;
+}
+
+[data-high-contrast="true"] .accessibility-panel button span {
+  color: #ffffff !important;
+}
+
+[data-high-contrast="true"] .accessibility-panel button:hover {
+  background-color: #555555 !important;
+  border-color: #ffffff !important;
+}
+
+/* Botón flotante de accesibilidad - Azul destacado */
+[data-high-contrast="true"] .accessibility-button {
+  background-color: #0066FF !important;
+  color: #FFFFFF !important;
+  border: 4px solid #FFFF00 !important;
+}
+
+[data-high-contrast="true"] .accessibility-button svg {
+  color: #FFFFFF !important;
+  fill: #FFFFFF !important;
+}
+
+[data-high-contrast="true"] .accessibility-button:hover {
+  background-color: #0055DD !important;
+  border-color: #FFFFFF !important;
+}
+
+/* ============================================
+   MODO OSCURO - Mejorado
    ============================================ */
 [data-dark-mode="true"] body {
   background-color: #1a1a1a !important;
   color: #ffffff !important;
 }
 
+/* Fondos blancos a gris oscuro */
+[data-dark-mode="true"] [class*="bg-white"],
 [data-dark-mode="true"] .bg-white {
   background-color: #2d2d2d !important;
+  color: #ffffff !important;
 }
 
+/* Fondos grises claros a gris oscuro */
+[data-dark-mode="true"] [class*="bg-gray-50"],
+[data-dark-mode="true"] [class*="bg-gray-100"],
 [data-dark-mode="true"] .bg-gray-50,
 [data-dark-mode="true"] .bg-gray-100 {
   background-color: #2d2d2d !important;
+  color: #ffffff !important;
 }
 
+/* Textos grises a claro */
+[data-dark-mode="true"] [class*="text-gray-600"],
+[data-dark-mode="true"] [class*="text-gray-700"],
+[data-dark-mode="true"] [class*="text-gray-800"],
+[data-dark-mode="true"] [class*="text-gray-900"],
 [data-dark-mode="true"] .text-gray-600,
 [data-dark-mode="true"] .text-gray-700,
-[data-dark-mode="true"] .text-gray-800 {
+[data-dark-mode="true"] .text-gray-800,
+[data-dark-mode="true"] .text-gray-900 {
   color: #e0e0e0 !important;
+}
+
+/* Bordes */
+[data-dark-mode="true"] [class*="border-gray"] {
+  border-color: #404040 !important;
+}
+
+/* Inputs y formularios */
+[data-dark-mode="true"] input,
+[data-dark-mode="true"] textarea,
+[data-dark-mode="true"] select {
+  background-color: #2d2d2d !important;
+  color: #ffffff !important;
+  border-color: #404040 !important;
+}
+
+/* Hover en inputs */
+[data-dark-mode="true"] input:hover,
+[data-dark-mode="true"] textarea:hover,
+[data-dark-mode="true"] select:hover {
+  border-color: #606060 !important;
 }

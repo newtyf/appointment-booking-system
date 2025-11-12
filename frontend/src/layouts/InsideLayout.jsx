@@ -17,7 +17,7 @@ const InsideLayout = () => {
         <header className="bg-white p-4 shadow-md flex justify-between items-center text-gray-800 border-b border-gray-200">
           <div className="flex items-center">
             <img src={MonarcaLogo} alt="Monarca Logo" className="h-10 w-auto mr-4" />
-            <span className="text-xl font-semibold">Citas - lista</span>
+            <span className="text-xl font-semibold">Bienvenido a Monarca</span>
           </div>
           <div className="flex items-center space-x-4">
             <svg className="h-8 w-8 text-gray-600 cursor-pointer" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
