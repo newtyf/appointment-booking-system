@@ -1,9 +1,9 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useCallback } from 'react';
 import { Volume2 } from 'lucide-react';
 
 const VoiceControl = ({ readingEnabled, setReadingEnabled }) => {
-  const textSelectionHandlerRef = useRef(null);
   const isMountedRef = useRef(true);
+  const utteranceRef = useRef(null);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -13,34 +13,31 @@ const VoiceControl = ({ readingEnabled, setReadingEnabled }) => {
     };
   }, []);
 
-  useEffect(() => {
-    if (!readingEnabled) {
-      stopReading();
-    }
-  }, [readingEnabled]);
-
-  const stopReading = () => {
+  const stopReading = useCallback(() => {
     if (window.speechSynthesis) {
       window.speechSynthesis.cancel();
-      setTimeout(() => window.speechSynthesis.cancel(), 0);
-      setTimeout(() => window.speechSynthesis.cancel(), 50);
-      setTimeout(() => window.speechSynthesis.cancel(), 100);
-      setTimeout(() => window.speechSynthesis.cancel(), 200);
-      window.speechSynthesis.pause();
     }
-    
-    if (textSelectionHandlerRef.current) {
-      document.removeEventListener('mouseup', textSelectionHandlerRef.current);
-      textSelectionHandlerRef.current = null;
-    }
-  };
+    utteranceRef.current = null;
+  }, []);
 
-  const speakText = (text) => {
+  // useCallback mantiene la misma referencia de la función
+  const handleTextSelection = useCallback(() => {
     if (!readingEnabled || !isMountedRef.current) {
       return;
     }
 
-    window.speechSynthesis.cancel();
+    const selectedText = window.getSelection().toString().trim();
+    if (selectedText && selectedText.length > 1) {
+      speakText(selectedText);
+    }
+  }, [readingEnabled]); // Solo se recrea cuando readingEnabled cambia
+
+  const speakText = useCallback((text) => {
+    if (!readingEnabled || !isMountedRef.current) {
+      return;
+    }
+
+    stopReading();
     
     setTimeout(() => {
       if (!readingEnabled || !isMountedRef.current) {
@@ -54,27 +51,32 @@ const VoiceControl = ({ readingEnabled, setReadingEnabled }) => {
       utterance.volume = 1;
       
       utterance.onend = () => {
-        if (!readingEnabled) {
-          window.speechSynthesis.cancel();
-        }
+        utteranceRef.current = null;
       };
 
-      if (readingEnabled && isMountedRef.current) {
-        window.speechSynthesis.speak(utterance);
-      }
+      utteranceRef.current = utterance;
+      window.speechSynthesis.speak(utterance);
     }, 50);
-  };
+  }, [readingEnabled, stopReading]);
 
-  const handleTextSelection = () => {
-    if (!readingEnabled || !isMountedRef.current) {
-      return;
+  // Effect para manejar el event listener
+  useEffect(() => {
+    if (readingEnabled) {
+      document.addEventListener('mouseup', handleTextSelection);
+      
+      // Mensaje de bienvenida
+      setTimeout(() => {
+        speakText('Modo lectura activado. Selecciona cualquier texto para escucharlo.');
+      }, 100);
+    } else {
+      stopReading();
     }
 
-    const selectedText = window.getSelection().toString().trim();
-    if (selectedText && selectedText.length > 1) {
-      speakText(selectedText);
-    }
-  };
+    // Cleanup: remueve el listener cuando se desmonta o cambia readingEnabled
+    return () => {
+      document.removeEventListener('mouseup', handleTextSelection);
+    };
+  }, [readingEnabled, handleTextSelection, speakText, stopReading]);
 
   const handleToggle = () => {
     if (!('speechSynthesis' in window)) {
@@ -82,18 +84,7 @@ const VoiceControl = ({ readingEnabled, setReadingEnabled }) => {
       return;
     }
 
-    if (readingEnabled) {
-      stopReading();
-      setReadingEnabled(false);
-    } else {
-      setReadingEnabled(true);
-      textSelectionHandlerRef.current = handleTextSelection;
-      document.addEventListener('mouseup', textSelectionHandlerRef.current);
-      
-      setTimeout(() => {
-        speakText('Modo lectura activado. Selecciona cualquier texto para escucharlo.');
-      }, 100);
-    }
+    setReadingEnabled(!readingEnabled);
   };
 
   return (
