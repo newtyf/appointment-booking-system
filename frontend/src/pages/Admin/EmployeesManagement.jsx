@@ -19,6 +19,130 @@ const EmployeesManagement = () => {
     role: 'stylist'
   });
 
+  const [fieldErrors, setFieldErrors] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    password: ''
+  });
+
+  // Validaciones ISO 25010
+  const validaciones = {
+    name: (value) => {
+      if (!value || !value.trim()) {
+        return 'El nombre es requerido';
+      }
+      if (value.trim().length < 3) {
+        return 'El nombre debe tener al menos 3 caracteres';
+      }
+      if (value.length > 100) {
+        return 'El nombre no puede exceder 100 caracteres';
+      }
+      // Solo letras, espacios, tildes, ñ y diéresis
+      if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/.test(value)) {
+        return 'El nombre solo puede contener letras y espacios';
+      }
+      // No múltiples espacios consecutivos
+      if (/\s{2,}/.test(value)) {
+        return 'El nombre no puede contener espacios múltiples consecutivos';
+      }
+      return '';
+    },
+
+    email: (value) => {
+      if (!value || !value.trim()) {
+        return 'El email es requerido';
+      }
+      if (value.length < 5) {
+        return 'El email debe tener al menos 5 caracteres';
+      }
+      if (value.length > 254) {
+        return 'El email no puede exceder 254 caracteres';
+      }
+      // Validación básica de formato email
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+        return 'Ingrese un email válido';
+      }
+      // Caracteres no permitidos (espacios, caracteres especiales peligrosos)
+      if (/[\s<>()[\]\\,;:]/.test(value)) {
+        return 'El email contiene caracteres no permitidos';
+      }
+      return '';
+    },
+
+    phone: (value) => {
+      // El teléfono es opcional
+      if (!value || !value.trim()) {
+        return '';
+      }
+      
+      // Contar solo dígitos
+      const digitos = value.replace(/\D/g, '');
+      
+      if (digitos.length < 7) {
+        return 'El teléfono debe tener al menos 7 dígitos';
+      }
+      if (digitos.length > 15) {
+        return 'El teléfono no puede exceder 15 dígitos';
+      }
+      // Solo números, espacios, guiones y paréntesis
+      if (!/^[\d\s\-()]+$/.test(value)) {
+        return 'El teléfono solo puede contener números, espacios, guiones y paréntesis';
+      }
+      return '';
+    },
+
+    password: (value) => {
+      if (!value) {
+        return 'La contraseña es requerida';
+      }
+      if (value.length < 8) {
+        return 'La contraseña debe tener al menos 8 caracteres';
+      }
+      if (value.length > 128) {
+        return 'La contraseña no puede exceder 128 caracteres';
+      }
+      if (!/[A-Z]/.test(value)) {
+        return 'La contraseña debe contener al menos una letra mayúscula';
+      }
+      if (!/[a-z]/.test(value)) {
+        return 'La contraseña debe contener al menos una letra minúscula';
+      }
+      if (!/\d/.test(value)) {
+        return 'La contraseña debe contener al menos un número';
+      }
+      if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(value)) {
+        return 'La contraseña debe contener al menos un carácter especial';
+      }
+      if (/\s/.test(value)) {
+        return 'La contraseña no puede contener espacios';
+      }
+      return '';
+    }
+  };
+
+  const validarCampo = (campo, valor) => {
+    const error = validaciones[campo](valor);
+    setFieldErrors(prev => ({
+      ...prev,
+      [campo]: error
+    }));
+    return error === '';
+  };
+
+  const validarFormulario = () => {
+    const errores = {
+      name: validaciones.name(formData.name),
+      email: validaciones.email(formData.email),
+      phone: validaciones.phone(formData.phone),
+      password: validaciones.password(formData.password)
+    };
+
+    setFieldErrors(errores);
+
+    return !Object.values(errores).some(error => error !== '');
+  };
+
   useEffect(() => {
     loadEmployees();
   }, []);
@@ -41,8 +165,9 @@ const EmployeesManagement = () => {
   };
 
   const handleCreateEmployee = async () => {
-    if (!formData.name || !formData.email || !formData.password) {
-      alert('Por favor completa los campos obligatorios');
+    // Validar formulario completo
+    if (!validarFormulario()) {
+      alert('Por favor corrige los errores en el formulario');
       return;
     }
 
@@ -84,6 +209,12 @@ const EmployeesManagement = () => {
       phone: '',
       password: '',
       role: 'stylist'
+    });
+    setFieldErrors({
+      name: '',
+      email: '',
+      phone: '',
+      password: ''
     });
   };
 
@@ -354,10 +485,19 @@ const EmployeesManagement = () => {
                 </label>
                 <input
                   value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  onChange={(e) => {
+                    setFormData({...formData, name: e.target.value});
+                    validarCampo('name', e.target.value);
+                  }}
+                  onBlur={(e) => validarCampo('name', e.target.value)}
+                  className={`w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                    fieldErrors.name ? 'border-red-500' : ''
+                  }`}
                   placeholder="Nombre completo"
                 />
+                {fieldErrors.name && (
+                  <p className="text-red-500 text-sm mt-1">{fieldErrors.name}</p>
+                )}
               </div>
               <div>
                 <label className="block text-gray-700 font-medium mb-2">
@@ -366,19 +506,37 @@ const EmployeesManagement = () => {
                 <input
                   type="email"
                   value={formData.email}
-                  onChange={(e) => setFormData({...formData, email: e.target.value})}
-                  className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  onChange={(e) => {
+                    setFormData({...formData, email: e.target.value});
+                    validarCampo('email', e.target.value);
+                  }}
+                  onBlur={(e) => validarCampo('email', e.target.value)}
+                  className={`w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                    fieldErrors.email ? 'border-red-500' : ''
+                  }`}
                   placeholder="correo@ejemplo.com"
                 />
+                {fieldErrors.email && (
+                  <p className="text-red-500 text-sm mt-1">{fieldErrors.email}</p>
+                )}
               </div>
               <div>
-                <label className="block text-gray-700 font-medium mb-2">Teléfono</label>
+                <label className="block text-gray-700 font-medium mb-2">Teléfono (opcional)</label>
                 <input
                   value={formData.phone}
-                  onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                  className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  onChange={(e) => {
+                    setFormData({...formData, phone: e.target.value});
+                    validarCampo('phone', e.target.value);
+                  }}
+                  onBlur={(e) => validarCampo('phone', e.target.value)}
+                  className={`w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                    fieldErrors.phone ? 'border-red-500' : ''
+                  }`}
                   placeholder="987654321"
                 />
+                {fieldErrors.phone && (
+                  <p className="text-red-500 text-sm mt-1">{fieldErrors.phone}</p>
+                )}
               </div>
               <div>
                 <label className="block text-gray-700 font-medium mb-2">
@@ -387,10 +545,19 @@ const EmployeesManagement = () => {
                 <input
                   type="password"
                   value={formData.password}
-                  onChange={(e) => setFormData({...formData, password: e.target.value})}
-                  className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  placeholder="Mínimo 6 caracteres"
+                  onChange={(e) => {
+                    setFormData({...formData, password: e.target.value});
+                    validarCampo('password', e.target.value);
+                  }}
+                  onBlur={(e) => validarCampo('password', e.target.value)}
+                  className={`w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                    fieldErrors.password ? 'border-red-500' : ''
+                  }`}
+                  placeholder="Mínimo 8 caracteres (mayús, minús, número, especial)"
                 />
+                {fieldErrors.password && (
+                  <p className="text-red-500 text-sm mt-1">{fieldErrors.password}</p>
+                )}
               </div>
               <div>
                 <label className="block text-gray-700 font-medium mb-2">

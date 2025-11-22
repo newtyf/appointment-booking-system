@@ -22,6 +22,77 @@ const WalkInAppointment = () => {
     time: ''
   });
 
+  const [fieldErrors, setFieldErrors] = useState({
+    client_name: '',
+    client_phone: ''
+  });
+
+  // Validaciones ISO 25010
+  const validaciones = {
+    client_name: (value) => {
+      if (!value || !value.trim()) {
+        return 'El nombre del cliente es requerido';
+      }
+      if (value.trim().length < 3) {
+        return 'El nombre debe tener al menos 3 caracteres';
+      }
+      if (value.length > 100) {
+        return 'El nombre no puede exceder 100 caracteres';
+      }
+      // Solo letras, espacios, tildes, ñ y diéresis
+      if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/.test(value)) {
+        return 'El nombre solo puede contener letras y espacios';
+      }
+      // No múltiples espacios consecutivos
+      if (/\s{2,}/.test(value)) {
+        return 'El nombre no puede contener espacios múltiples consecutivos';
+      }
+      return '';
+    },
+
+    client_phone: (value) => {
+      // El teléfono es opcional
+      if (!value || !value.trim()) {
+        return '';
+      }
+      
+      // Contar solo dígitos
+      const digitos = value.replace(/\D/g, '');
+      
+      if (digitos.length < 7) {
+        return 'El teléfono debe tener al menos 7 dígitos';
+      }
+      if (digitos.length > 15) {
+        return 'El teléfono no puede exceder 15 dígitos';
+      }
+      // Solo números, espacios, guiones y paréntesis
+      if (!/^[\d\s\-()]+$/.test(value)) {
+        return 'El teléfono solo puede contener números, espacios, guiones y paréntesis';
+      }
+      return '';
+    }
+  };
+
+  const validarCampo = (campo, valor) => {
+    const error = validaciones[campo](valor);
+    setFieldErrors(prev => ({
+      ...prev,
+      [campo]: error
+    }));
+    return error === '';
+  };
+
+  const validarFormulario = () => {
+    const errores = {
+      client_name: validaciones.client_name(formData.client_name),
+      client_phone: validaciones.client_phone(formData.client_phone)
+    };
+
+    setFieldErrors(errores);
+
+    return !Object.values(errores).some(error => error !== '');
+  };
+
   useEffect(() => {
     loadInitialData();
   }, []);
@@ -89,6 +160,12 @@ const WalkInAppointment = () => {
     e.preventDefault();
     setError('');
     setSuccess('');
+
+    // Validar campos de texto
+    if (!validarFormulario()) {
+      setError('Por favor corrige los errores en el formulario');
+      return;
+    }
 
     if (!formData.client_name || !formData.stylist_id || !formData.service_id || !formData.time) {
       setError('Por favor completa todos los campos obligatorios');
@@ -160,18 +237,27 @@ const WalkInAppointment = () => {
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Nombre del Cliente */}
           <div>
-            <label className="block text-gray-700 font-semibold mb-2 flex items-center">
+            <label className="flex text-gray-700 font-semibold mb-2 items-center">
               <User className="h-5 w-5 mr-2 text-purple-600" />
               Nombre del Cliente <span className="text-red-500 ml-1">*</span>
             </label>
             <input
               type="text"
               value={formData.client_name}
-              onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+              onChange={(e) => {
+                setFormData({ ...formData, client_name: e.target.value });
+                validarCampo('client_name', e.target.value);
+              }}
+              onBlur={(e) => validarCampo('client_name', e.target.value)}
+              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                fieldErrors.client_name ? 'border-red-500' : 'border-gray-300'
+              }`}
               placeholder="Ingresa el nombre del cliente"
               required
             />
+            {fieldErrors.client_name && (
+              <p className="text-red-500 text-sm mt-1">{fieldErrors.client_name}</p>
+            )}
           </div>
 
           {/* Teléfono del Cliente */}
@@ -182,15 +268,24 @@ const WalkInAppointment = () => {
             <input
               type="tel"
               value={formData.client_phone}
-              onChange={(e) => setFormData({ ...formData, client_phone: e.target.value })}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+              onChange={(e) => {
+                setFormData({ ...formData, client_phone: e.target.value });
+                validarCampo('client_phone', e.target.value);
+              }}
+              onBlur={(e) => validarCampo('client_phone', e.target.value)}
+              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                fieldErrors.client_phone ? 'border-red-500' : 'border-gray-300'
+              }`}
               placeholder="987654321"
             />
+            {fieldErrors.client_phone && (
+              <p className="text-red-500 text-sm mt-1">{fieldErrors.client_phone}</p>
+            )}
           </div>
 
           {/* Servicio */}
           <div>
-            <label className="block text-gray-700 font-semibold mb-2 flex items-center">
+            <label className="flex text-gray-700 font-semibold mb-2 items-center">
               <Scissors className="h-5 w-5 mr-2 text-purple-600" />
               Servicio <span className="text-red-500 ml-1">*</span>
             </label>
@@ -212,7 +307,7 @@ const WalkInAppointment = () => {
           {/* Estilista - mostrar solo si hay servicio seleccionado */}
           {formData.service_id && (
             <div>
-              <label className="block text-gray-700 font-semibold mb-2 flex items-center">
+              <label className="flex text-gray-700 font-semibold mb-2 items-center">
                 <User className="h-5 w-5 mr-2 text-purple-600" />
                 Estilista Disponible Ahora <span className="text-red-500 ml-1">*</span>
               </label>
@@ -279,7 +374,7 @@ const WalkInAppointment = () => {
           {/* Hora - mostrar solo si hay estilista seleccionado */}
           {selectedStylist && availableSlots.length > 0 && (
             <div>
-              <label className="block text-gray-700 font-semibold mb-2 flex items-center">
+              <label className="flex text-gray-700 font-semibold mb-2 items-center">
                 <AlertCircle className="h-5 w-5 mr-2 text-purple-600" />
                 Hora de Inicio <span className="text-red-500 ml-1">*</span>
               </label>

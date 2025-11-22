@@ -11,17 +11,163 @@ const Register = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState(''); 
+  const [success, setSuccess] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({
+    nombre: '',
+    email: '',
+    telefono: '',
+    password: '',
+    confirmPassword: ''
+  });
 
   const navigate = useNavigate();
+
+  // Validaciones siguiendo ISO 25010
+  const validaciones = {
+    nombre: (valor) => {
+      // Mínimo 3 caracteres, máximo 100
+      if (!valor || valor.trim().length < 3) {
+        return 'El nombre debe tener al menos 3 caracteres';
+      }
+      if (valor.length > 100) {
+        return 'El nombre no puede exceder 100 caracteres';
+      }
+      // Solo letras, espacios, tildes y ñ
+      const regexNombre = /^[a-záéíóúñüA-ZÁÉÍÓÚÑÜ\s]+$/;
+      if (!regexNombre.test(valor)) {
+        return 'El nombre solo puede contener letras y espacios';
+      }
+      // No permitir múltiples espacios consecutivos
+      if (/\s{2,}/.test(valor)) {
+        return 'El nombre no puede contener espacios múltiples consecutivos';
+      }
+      return '';
+    },
+
+    email: (valor) => {
+      // Mínimo 5 caracteres (a@b.c), máximo 254 según RFC 5321
+      if (!valor || valor.length < 5) {
+        return 'El email debe tener al menos 5 caracteres';
+      }
+      if (valor.length > 254) {
+        return 'El email no puede exceder 254 caracteres';
+      }
+      // Regex completo para validar email
+      const regexEmail = /^[a-zA-Z0-9]([a-zA-Z0-9._-]{0,63})?@[a-zA-Z0-9]([a-zA-Z0-9.-]{0,253})?[a-zA-Z0-9]\.[a-zA-Z]{2,}$/;
+      if (!regexEmail.test(valor)) {
+        return 'Ingrese un email válido (ej: usuario@dominio.com)';
+      }
+      // Validar que no tenga caracteres especiales inválidos
+      if (/[<>()[\]\\,;:"\s]/.test(valor.split('@')[0])) {
+        return 'El email contiene caracteres no permitidos';
+      }
+      return '';
+    },
+
+    telefono: (valor) => {
+      // Eliminar espacios y guiones para validación
+      const telefonoLimpio = valor.replace(/[\s-]/g, '');
+      
+      // Mínimo 7 dígitos, máximo 15 según ITU-T E.164
+      if (!telefonoLimpio || telefonoLimpio.length < 7) {
+        return 'El teléfono debe tener al menos 7 dígitos';
+      }
+      if (telefonoLimpio.length > 15) {
+        return 'El teléfono no puede exceder 15 dígitos';
+      }
+      // Solo números, espacios, guiones y paréntesis
+      const regexTelefono = /^[\d\s\-()]+$/;
+      if (!regexTelefono.test(valor)) {
+        return 'El teléfono solo puede contener números, espacios, guiones y paréntesis';
+      }
+      // Debe contener al menos 7 dígitos numéricos
+      const digitosCount = (telefonoLimpio.match(/\d/g) || []).length;
+      if (digitosCount < 7) {
+        return 'El teléfono debe contener al menos 7 dígitos';
+      }
+      return '';
+    },
+
+    password: (valor) => {
+      // Mínimo 8 caracteres, máximo 128 por seguridad
+      if (!valor || valor.length < 8) {
+        return 'La contraseña debe tener al menos 8 caracteres';
+      }
+      if (valor.length > 128) {
+        return 'La contraseña no puede exceder 128 caracteres';
+      }
+      // Debe contener al menos una mayúscula
+      if (!/[A-Z]/.test(valor)) {
+        return 'La contraseña debe contener al menos una letra mayúscula';
+      }
+      // Debe contener al menos una minúscula
+      if (!/[a-z]/.test(valor)) {
+        return 'La contraseña debe contener al menos una letra minúscula';
+      }
+      // Debe contener al menos un número
+      if (!/\d/.test(valor)) {
+        return 'La contraseña debe contener al menos un número';
+      }
+      // Debe contener al menos un carácter especial
+      if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(valor)) {
+        return 'La contraseña debe contener al menos un carácter especial (!@#$%^&*...)';
+      }
+      // No debe contener espacios
+      if (/\s/.test(valor)) {
+        return 'La contraseña no puede contener espacios';
+      }
+      return '';
+    },
+
+    confirmPassword: (valor, passwordOriginal) => {
+      if (!valor) {
+        return 'Debe confirmar su contraseña';
+      }
+      if (valor !== passwordOriginal) {
+        return 'Las contraseñas no coinciden';
+      }
+      return '';
+    }
+  };
+
+  // Validar un campo específico
+  const validarCampo = (campo, valor, valorAdicional = null) => {
+    const mensajeError = campo === 'confirmPassword' 
+      ? validaciones[campo](valor, valorAdicional)
+      : validaciones[campo](valor);
+    
+    setFieldErrors(prev => ({
+      ...prev,
+      [campo]: mensajeError
+    }));
+    
+    return mensajeError === '';
+  };
+
+  // Validar todos los campos antes de enviar
+  const validarFormulario = () => {
+    const errores = {
+      nombre: validaciones.nombre(nombre),
+      email: validaciones.email(email),
+      telefono: validaciones.telefono(telefono),
+      password: validaciones.password(password),
+      confirmPassword: validaciones.confirmPassword(confirmPassword, password)
+    };
+
+    setFieldErrors(errores);
+
+    // Retornar true si no hay errores
+    return Object.values(errores).every(error => error === '');
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
 
-    if (password !== confirmPassword) {
-      setError('Las contraseñas no coinciden.');
+    // Validar todos los campos
+    if (!validarFormulario()) {
+      setError('Por favor, corrija los errores en el formulario');
       return;
     }
 
@@ -120,12 +266,21 @@ const Register = () => {
                   type="text"
                   autoComplete="name"
                   required
-                  className="block w-full rounded-md border-0 py-2 pl-10 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-pink-600 sm:text-sm sm:leading-6"
+                  className={`block w-full rounded-md border-0 py-2 pl-10 text-gray-900 ring-1 ring-inset ${
+                    fieldErrors.nombre ? 'ring-red-500 focus:ring-red-600' : 'ring-gray-300 focus:ring-pink-600'
+                  } placeholder:text-gray-400 focus:ring-2 focus:ring-inset sm:text-sm sm:leading-6`}
                   placeholder="Ingrese su nombre"
                   value={nombre}
-                  onChange={(e) => setNombre(e.target.value)}
+                  onChange={(e) => {
+                    setNombre(e.target.value);
+                    validarCampo('nombre', e.target.value);
+                  }}
+                  onBlur={(e) => validarCampo('nombre', e.target.value)}
                 />
               </div>
+              {fieldErrors.nombre && (
+                <p className="mt-1 text-sm text-red-600">{fieldErrors.nombre}</p>
+              )}
             </div>
 
             {/* Campo Correo Electrónico */}
@@ -144,12 +299,21 @@ const Register = () => {
                   type="email"
                   autoComplete="email"
                   required
-                  className="block w-full rounded-md border-0 py-2 pl-10 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-pink-600 sm:text-sm sm:leading-6"
+                  className={`block w-full rounded-md border-0 py-2 pl-10 text-gray-900 ring-1 ring-inset ${
+                    fieldErrors.email ? 'ring-red-500 focus:ring-red-600' : 'ring-gray-300 focus:ring-pink-600'
+                  } placeholder:text-gray-400 focus:ring-2 focus:ring-inset sm:text-sm sm:leading-6`}
                   placeholder="Ingrese su correo electrónico"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    validarCampo('email', e.target.value);
+                  }}
+                  onBlur={(e) => validarCampo('email', e.target.value)}
                 />
               </div>
+              {fieldErrors.email && (
+                <p className="mt-1 text-sm text-red-600">{fieldErrors.email}</p>
+              )}
             </div>
 
             {/* Campo Teléfono */}
@@ -167,12 +331,21 @@ const Register = () => {
                   type="tel"
                   autoComplete="tel"
                   required
-                  className="block w-full rounded-md border-0 py-2 pl-10 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-pink-600 sm:text-sm sm:leading-6"
+                  className={`block w-full rounded-md border-0 py-2 pl-10 text-gray-900 ring-1 ring-inset ${
+                    fieldErrors.telefono ? 'ring-red-500 focus:ring-red-600' : 'ring-gray-300 focus:ring-pink-600'
+                  } placeholder:text-gray-400 focus:ring-2 focus:ring-inset sm:text-sm sm:leading-6`}
                   placeholder="Ingrese su teléfono"
                   value={telefono}
-                  onChange={(e) => setTelefono(e.target.value)}
+                  onChange={(e) => {
+                    setTelefono(e.target.value);
+                    validarCampo('telefono', e.target.value);
+                  }}
+                  onBlur={(e) => validarCampo('telefono', e.target.value)}
                 />
               </div>
+              {fieldErrors.telefono && (
+                <p className="mt-1 text-sm text-red-600">{fieldErrors.telefono}</p>
+              )}
             </div>
 
             {/* Campo Contraseña */}
@@ -190,12 +363,24 @@ const Register = () => {
                   type="password"
                   autoComplete="new-password"
                   required
-                  className="block w-full rounded-md border-0 py-2 pl-10 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-pink-600 sm:text-sm sm:leading-6"
+                  className={`block w-full rounded-md border-0 py-2 pl-10 text-gray-900 ring-1 ring-inset ${
+                    fieldErrors.password ? 'ring-red-500 focus:ring-red-600' : 'ring-gray-300 focus:ring-pink-600'
+                  } placeholder:text-gray-400 focus:ring-2 focus:ring-inset sm:text-sm sm:leading-6`}
                   placeholder="Ingrese su contraseña"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    validarCampo('password', e.target.value);
+                    if (confirmPassword) {
+                      validarCampo('confirmPassword', confirmPassword, e.target.value);
+                    }
+                  }}
+                  onBlur={(e) => validarCampo('password', e.target.value)}
                 />
               </div>
+              {fieldErrors.password && (
+                <p className="mt-1 text-sm text-red-600">{fieldErrors.password}</p>
+              )}
             </div>
 
             {/* Campo Confirmar Contraseña */}
@@ -213,12 +398,21 @@ const Register = () => {
                   type="password"
                   autoComplete="new-password"
                   required
-                  className="block w-full rounded-md border-0 py-2 pl-10 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-pink-600 sm:text-sm sm:leading-6"
+                  className={`block w-full rounded-md border-0 py-2 pl-10 text-gray-900 ring-1 ring-inset ${
+                    fieldErrors.confirmPassword ? 'ring-red-500 focus:ring-red-600' : 'ring-gray-300 focus:ring-pink-600'
+                  } placeholder:text-gray-400 focus:ring-2 focus:ring-inset sm:text-sm sm:leading-6`}
                   placeholder="Confirme su contraseña"
                   value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value);
+                    validarCampo('confirmPassword', e.target.value, password);
+                  }}
+                  onBlur={(e) => validarCampo('confirmPassword', e.target.value, password)}
                 />
               </div>
+              {fieldErrors.confirmPassword && (
+                <p className="mt-1 text-sm text-red-600">{fieldErrors.confirmPassword}</p>
+              )}
             </div>
 
             <Button type="submit" className="w-full">

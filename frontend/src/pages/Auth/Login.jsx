@@ -9,12 +9,91 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({
+    email: '',
+    password: ''
+  });
   const navigate = useNavigate();
+
+  // Validaciones siguiendo ISO 25010 para Login
+  const validaciones = {
+    email: (valor) => {
+      // Mínimo 5 caracteres (a@b.c), máximo 254 según RFC 5321
+      if (!valor || valor.trim().length === 0) {
+        return 'El email es requerido';
+      }
+      if (valor.length < 5) {
+        return 'El email debe tener al menos 5 caracteres';
+      }
+      if (valor.length > 254) {
+        return 'El email no puede exceder 254 caracteres';
+      }
+      // Regex completo para validar email
+      const regexEmail = /^[a-zA-Z0-9]([a-zA-Z0-9._-]{0,63})?@[a-zA-Z0-9]([a-zA-Z0-9.-]{0,253})?[a-zA-Z0-9]\.[a-zA-Z]{2,}$/;
+      if (!regexEmail.test(valor)) {
+        return 'Ingrese un email válido (ej: usuario@dominio.com)';
+      }
+      // Validar que no tenga caracteres especiales inválidos
+      if (/[<>()[\]\\,;:"\s]/.test(valor.split('@')[0])) {
+        return 'El email contiene caracteres no permitidos';
+      }
+      return '';
+    },
+
+    password: (valor) => {
+      // Para login, validaciones más simples pero efectivas
+      if (!valor || valor.length === 0) {
+        return 'La contraseña es requerida';
+      }
+      if (valor.length < 5) {
+        return 'La contraseña debe tener al menos 5 caracteres';
+      }
+      if (valor.length > 128) {
+        return 'La contraseña no puede exceder 128 caracteres';
+      }
+      // Verificar que no contenga solo espacios
+      if (/^\s+$/.test(valor)) {
+        return 'La contraseña no puede contener solo espacios';
+      }
+      return '';
+    }
+  };
+
+  // Validar un campo específico
+  const validarCampo = (campo, valor) => {
+    const mensajeError = validaciones[campo](valor);
+    
+    setFieldErrors(prev => ({
+      ...prev,
+      [campo]: mensajeError
+    }));
+    
+    return mensajeError === '';
+  };
+
+  // Validar todos los campos antes de enviar
+  const validarFormulario = () => {
+    const errores = {
+      email: validaciones.email(email),
+      password: validaciones.password(password)
+    };
+
+    setFieldErrors(errores);
+
+    // Retornar true si no hay errores
+    return Object.values(errores).every(error => error === '');
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
+
+    // Validar todos los campos
+    if (!validarFormulario()) {
+      setError('Por favor, corrija los errores en el formulario');
+      return;
+    }
 
     try {
       const response = await axios.post('/api/auth/login', {
@@ -118,12 +197,21 @@ const Login = () => {
                   type="email"
                   autoComplete="email"
                   required
-                  className="block w-full rounded-md border-0 py-2 pl-10 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-pink-600 sm:text-sm sm:leading-6"
+                  className={`block w-full rounded-md border-0 py-2 pl-10 text-gray-900 ring-1 ring-inset ${
+                    fieldErrors.email ? 'ring-red-500 focus:ring-red-600' : 'ring-gray-300 focus:ring-pink-600'
+                  } placeholder:text-gray-400 focus:ring-2 focus:ring-inset sm:text-sm sm:leading-6`}
                   placeholder="Ingrese su correo electrónico"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    validarCampo('email', e.target.value);
+                  }}
+                  onBlur={(e) => validarCampo('email', e.target.value)}
                 />
               </div>
+              {fieldErrors.email && (
+                <p className="mt-1 text-sm text-red-600">{fieldErrors.email}</p>
+              )}
             </div>
 
             {/* Campo Contraseña */}
@@ -141,12 +229,21 @@ const Login = () => {
                   type="password"
                   autoComplete="current-password"
                   required
-                  className="block w-full rounded-md border-0 py-2 pl-10 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-pink-600 sm:text-sm sm:leading-6"
+                  className={`block w-full rounded-md border-0 py-2 pl-10 text-gray-900 ring-1 ring-inset ${
+                    fieldErrors.password ? 'ring-red-500 focus:ring-red-600' : 'ring-gray-300 focus:ring-pink-600'
+                  } placeholder:text-gray-400 focus:ring-2 focus:ring-inset sm:text-sm sm:leading-6`}
                   placeholder="Ingrese su contraseña"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    validarCampo('password', e.target.value);
+                  }}
+                  onBlur={(e) => validarCampo('password', e.target.value)}
                 />
               </div>
+              {fieldErrors.password && (
+                <p className="mt-1 text-sm text-red-600">{fieldErrors.password}</p>
+              )}
             </div>
 
             <Button type="submit" className="w-full">

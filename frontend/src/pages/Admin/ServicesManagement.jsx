@@ -21,6 +21,148 @@ const ServicesManagement = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Estados para errores de validación
+  const [fieldErrors, setFieldErrors] = useState({
+    nombre: '',
+    duracion: '',
+    descripcion: '',
+    precio: ''
+  });
+
+  const [editFieldErrors, setEditFieldErrors] = useState({
+    nombre: '',
+    duracion: '',
+    descripcion: '',
+    precio: ''
+  });
+
+  // Validaciones siguiendo ISO 25010
+  const validaciones = {
+    nombre: (valor) => {
+      if (!valor || valor.trim().length === 0) {
+        return 'El nombre del servicio es requerido';
+      }
+      if (valor.trim().length < 3) {
+        return 'El nombre debe tener al menos 3 caracteres';
+      }
+      if (valor.length > 100) {
+        return 'El nombre no puede exceder 100 caracteres';
+      }
+      // Solo letras, números, espacios y algunos caracteres especiales permitidos
+      const regexNombre = /^[a-záéíóúñüA-ZÁÉÍÓÚÑÜ0-9\s\-.,()]+$/;
+      if (!regexNombre.test(valor)) {
+        return 'El nombre solo puede contener letras, números, espacios y caracteres básicos (-, ., (, ))';
+      }
+      if (/\s{2,}/.test(valor)) {
+        return 'El nombre no puede contener espacios múltiples consecutivos';
+      }
+      return '';
+    },
+
+    duracion: (valor) => {
+      if (!valor || valor === '') {
+        return 'La duración es requerida';
+      }
+      const duracionNum = parseInt(valor);
+      if (isNaN(duracionNum)) {
+        return 'La duración debe ser un número válido';
+      }
+      if (duracionNum < 5) {
+        return 'La duración mínima es 5 minutos';
+      }
+      if (duracionNum > 480) {
+        return 'La duración máxima es 480 minutos (8 horas)';
+      }
+      if (duracionNum % 5 !== 0) {
+        return 'La duración debe ser múltiplo de 5 minutos';
+      }
+      return '';
+    },
+
+    descripcion: (valor) => {
+      if (!valor || valor.trim().length === 0) {
+        return 'La descripción es requerida';
+      }
+      if (valor.trim().length < 10) {
+        return 'La descripción debe tener al menos 10 caracteres';
+      }
+      if (valor.length > 500) {
+        return 'La descripción no puede exceder 500 caracteres';
+      }
+      return '';
+    },
+
+    precio: (valor) => {
+      if (!valor || valor === '') {
+        return 'El precio es requerido';
+      }
+      const precioNum = parseFloat(valor);
+      if (isNaN(precioNum)) {
+        return 'El precio debe ser un número válido';
+      }
+      if (precioNum < 0) {
+        return 'El precio no puede ser negativo';
+      }
+      if (precioNum === 0) {
+        return 'El precio debe ser mayor a 0';
+      }
+      if (precioNum > 9999.99) {
+        return 'El precio máximo es S/ 9,999.99';
+      }
+      // Validar que tenga máximo 2 decimales
+      if (!/^\d+(\.\d{1,2})?$/.test(valor)) {
+        return 'El precio solo puede tener hasta 2 decimales';
+      }
+      return '';
+    }
+  };
+
+  // Validar campo específico (para crear)
+  const validarCampo = (campo, valor) => {
+    const mensajeError = validaciones[campo](valor);
+    setFieldErrors(prev => ({
+      ...prev,
+      [campo]: mensajeError
+    }));
+    return mensajeError === '';
+  };
+
+  // Validar campo específico (para editar)
+  const validarCampoEditar = (campo, valor) => {
+    const mensajeError = validaciones[campo](valor);
+    setEditFieldErrors(prev => ({
+      ...prev,
+      [campo]: mensajeError
+    }));
+    return mensajeError === '';
+  };
+
+  // Validar formulario completo (crear)
+  const validarFormularioAgregar = () => {
+    const errores = {
+      nombre: validaciones.nombre(nuevoNombre),
+      duracion: validaciones.duracion(nuevaDuracion),
+      descripcion: validaciones.descripcion(nuevaDescripcion),
+      precio: validaciones.precio(nuevoPrecio)
+    };
+
+    setFieldErrors(errores);
+    return Object.values(errores).every(error => error === '');
+  };
+
+  // Validar formulario completo (editar)
+  const validarFormularioEditar = () => {
+    const errores = {
+      nombre: validaciones.nombre(nombreEditado),
+      duracion: validaciones.duracion(duracionEditada),
+      descripcion: validaciones.descripcion(descripcionEditada),
+      precio: validaciones.precio(precioEditado)
+    };
+
+    setEditFieldErrors(errores);
+    return Object.values(errores).every(error => error === '');
+  };
+
   useEffect(() => {
     loadServices();
   }, []);
@@ -40,17 +182,18 @@ const ServicesManagement = () => {
   };
 
   const handleAgregarServicio = async () => {
-    if (!nuevoNombre || !nuevaDuracion || !nuevaDescripcion || !nuevoPrecio) {
-      alert('Por favor completa todos los campos');
+    // Validar todos los campos
+    if (!validarFormularioAgregar()) {
+      alert('Por favor, corrija los errores en el formulario');
       return;
     }
 
     try {
       setLoading(true);
       const nuevoServicio = {
-        name: nuevoNombre,
+        name: nuevoNombre.trim(),
         duration_min: parseInt(nuevaDuracion),
-        description: nuevaDescripcion,
+        description: nuevaDescripcion.trim(),
         price: parseFloat(nuevoPrecio),
       };
 
@@ -58,10 +201,12 @@ const ServicesManagement = () => {
       setServices((prev) => [...prev, servicioCreado]);
       setModalTipo(null);
       
+      // Limpiar campos y errores
       setNuevoNombre("");
       setNuevaDuracion("");
       setNuevaDescripcion("");
       setNuevoPrecio("");
+      setFieldErrors({ nombre: '', duracion: '', descripcion: '', precio: '' });
       
       alert('Servicio creado exitosamente');
     } catch (err) {
@@ -73,17 +218,18 @@ const ServicesManagement = () => {
   };
 
   const handleEditarServicio = async () => {
-    if (!nombreEditado || !duracionEditada || !descripcionEditada || !precioEditado) {
-      alert('Por favor completa todos los campos');
+    // Validar todos los campos
+    if (!validarFormularioEditar()) {
+      alert('Por favor, corrija los errores en el formulario');
       return;
     }
 
     try {
       setLoading(true);
       const servicioActualizado = {
-        name: nombreEditado,
+        name: nombreEditado.trim(),
         duration_min: parseInt(duracionEditada),
-        description: descripcionEditada,
+        description: descripcionEditada.trim(),
         price: parseFloat(precioEditado),
       };
 
@@ -100,6 +246,7 @@ const ServicesManagement = () => {
 
       setModalTipo(null);
       setServicioSeleccionado(null);
+      setEditFieldErrors({ nombre: '', duracion: '', descripcion: '', precio: '' });
       
       alert('Servicio actualizado exitosamente');
     } catch (err) {
@@ -179,6 +326,7 @@ const ServicesManagement = () => {
               setNuevaDuracion("");
               setNuevaDescripcion("");
               setNuevoPrecio("");
+              setFieldErrors({ nombre: '', duracion: '', descripcion: '', precio: '' });
             }}
             disabled={loading}
             className='bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200 disabled:bg-gray-400'
@@ -262,6 +410,7 @@ const ServicesManagement = () => {
                             setDuracionEditada(service.duration_min);
                             setDescripcionEditada(service.description);
                             setPrecioEditado(service.price || 0);
+                            setEditFieldErrors({ nombre: '', duracion: '', descripcion: '', precio: '' });
                           }}
                           className='text-purple-600 hover:text-purple-900 mx-1'
                           title="Editar"
@@ -290,7 +439,10 @@ const ServicesManagement = () => {
           <Scissors className="h-16 w-16 text-gray-300 mx-auto mb-4" />
           <p className='text-gray-600 text-lg mb-4'>No hay servicios registrados</p>
           <button
-            onClick={() => setModalTipo("agregar")}
+            onClick={() => {
+              setModalTipo("agregar");
+              setFieldErrors({ nombre: '', duracion: '', descripcion: '', precio: '' });
+            }}
             className='bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 px-6 rounded-lg transition duration-200'
           >
             Crear Primer Servicio
@@ -334,9 +486,18 @@ const ServicesManagement = () => {
               <label className='block text-gray-700 font-medium mb-2'>Nombre</label>
               <input
                 value={nombreEditado}
-                onChange={(e) => setNombreEditado(e.target.value)}
-                className='w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-pink-500'
+                onChange={(e) => {
+                  setNombreEditado(e.target.value);
+                  validarCampoEditar('nombre', e.target.value);
+                }}
+                onBlur={(e) => validarCampoEditar('nombre', e.target.value)}
+                className={`w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 ${
+                  editFieldErrors.nombre ? 'border-red-500 focus:ring-red-500' : 'focus:ring-pink-500'
+                }`}
               />
+              {editFieldErrors.nombre && (
+                <p className="mt-1 text-sm text-red-600">{editFieldErrors.nombre}</p>
+              )}
             </div>
 
             <div className='mb-4'>
@@ -344,9 +505,20 @@ const ServicesManagement = () => {
               <input
                 type='number'
                 value={duracionEditada}
-                onChange={(e) => setDuracionEditada(e.target.value)}
-                className='w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-pink-500'
+                onChange={(e) => {
+                  setDuracionEditada(e.target.value);
+                  validarCampoEditar('duracion', e.target.value);
+                }}
+                onBlur={(e) => validarCampoEditar('duracion', e.target.value)}
+                className={`w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 ${
+                  editFieldErrors.duracion ? 'border-red-500 focus:ring-red-500' : 'focus:ring-pink-500'
+                }`}
+                min="5"
+                step="5"
               />
+              {editFieldErrors.duracion && (
+                <p className="mt-1 text-sm text-red-600">{editFieldErrors.duracion}</p>
+              )}
             </div>
 
             <div className='mb-4'>
@@ -355,20 +527,39 @@ const ServicesManagement = () => {
                 type='number'
                 step='0.01'
                 value={precioEditado}
-                onChange={(e) => setPrecioEditado(e.target.value)}
-                className='w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-pink-500'
+                onChange={(e) => {
+                  setPrecioEditado(e.target.value);
+                  validarCampoEditar('precio', e.target.value);
+                }}
+                onBlur={(e) => validarCampoEditar('precio', e.target.value)}
+                className={`w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 ${
+                  editFieldErrors.precio ? 'border-red-500 focus:ring-red-500' : 'focus:ring-pink-500'
+                }`}
                 placeholder='Ej: 50.00'
+                min="0.01"
               />
+              {editFieldErrors.precio && (
+                <p className="mt-1 text-sm text-red-600">{editFieldErrors.precio}</p>
+              )}
             </div>
 
             <div className='mb-4'>
               <label className='block text-gray-700 font-medium mb-2'>Descripción</label>
               <textarea
                 value={descripcionEditada}
-                onChange={(e) => setDescripcionEditada(e.target.value)}
-                className='w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-pink-500'
+                onChange={(e) => {
+                  setDescripcionEditada(e.target.value);
+                  validarCampoEditar('descripcion', e.target.value);
+                }}
+                onBlur={(e) => validarCampoEditar('descripcion', e.target.value)}
+                className={`w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 ${
+                  editFieldErrors.descripcion ? 'border-red-500 focus:ring-red-500' : 'focus:ring-pink-500'
+                }`}
                 rows="3"
               />
+              {editFieldErrors.descripcion && (
+                <p className="mt-1 text-sm text-red-600">{editFieldErrors.descripcion}</p>
+              )}
             </div>
 
             <div className='mt-6 flex gap-3 justify-end'>
@@ -437,10 +628,19 @@ const ServicesManagement = () => {
               <label className='block text-gray-700 font-medium mb-2'>Nombre</label>
               <input
                 value={nuevoNombre}
-                onChange={(e) => setNuevoNombre(e.target.value)}
-                className='w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-pink-500'
+                onChange={(e) => {
+                  setNuevoNombre(e.target.value);
+                  validarCampo('nombre', e.target.value);
+                }}
+                onBlur={(e) => validarCampo('nombre', e.target.value)}
+                className={`w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 ${
+                  fieldErrors.nombre ? 'border-red-500 focus:ring-red-500' : 'focus:ring-pink-500'
+                }`}
                 placeholder='Ej: Corte de cabello'
               />
+              {fieldErrors.nombre && (
+                <p className="mt-1 text-sm text-red-600">{fieldErrors.nombre}</p>
+              )}
             </div>
 
             <div className='mb-4'>
@@ -448,10 +648,21 @@ const ServicesManagement = () => {
               <input
                 type='number'
                 value={nuevaDuracion}
-                onChange={(e) => setNuevaDuracion(e.target.value)}
-                className='w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-pink-500'
+                onChange={(e) => {
+                  setNuevaDuracion(e.target.value);
+                  validarCampo('duracion', e.target.value);
+                }}
+                onBlur={(e) => validarCampo('duracion', e.target.value)}
+                className={`w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 ${
+                  fieldErrors.duracion ? 'border-red-500 focus:ring-red-500' : 'focus:ring-pink-500'
+                }`}
                 placeholder='Ej: 30'
+                min="5"
+                step="5"
               />
+              {fieldErrors.duracion && (
+                <p className="mt-1 text-sm text-red-600">{fieldErrors.duracion}</p>
+              )}
             </div>
 
             <div className='mb-4'>
@@ -460,21 +671,40 @@ const ServicesManagement = () => {
                 type='number'
                 step='0.01'
                 value={nuevoPrecio}
-                onChange={(e) => setNuevoPrecio(e.target.value)}
-                className='w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-pink-500'
+                onChange={(e) => {
+                  setNuevoPrecio(e.target.value);
+                  validarCampo('precio', e.target.value);
+                }}
+                onBlur={(e) => validarCampo('precio', e.target.value)}
+                className={`w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 ${
+                  fieldErrors.precio ? 'border-red-500 focus:ring-red-500' : 'focus:ring-pink-500'
+                }`}
                 placeholder='Ej: 50.00'
+                min="0.01"
               />
+              {fieldErrors.precio && (
+                <p className="mt-1 text-sm text-red-600">{fieldErrors.precio}</p>
+              )}
             </div>
 
             <div className='mb-4'>
               <label className='block text-gray-700 font-medium mb-2'>Descripción</label>
               <textarea
                 value={nuevaDescripcion}
-                onChange={(e) => setNuevaDescripcion(e.target.value)}
-                className='w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-pink-500'
+                onChange={(e) => {
+                  setNuevaDescripcion(e.target.value);
+                  validarCampo('descripcion', e.target.value);
+                }}
+                onBlur={(e) => validarCampo('descripcion', e.target.value)}
+                className={`w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 ${
+                  fieldErrors.descripcion ? 'border-red-500 focus:ring-red-500' : 'focus:ring-pink-500'
+                }`}
                 placeholder='Describe el servicio...'
                 rows="3"
               />
+              {fieldErrors.descripcion && (
+                <p className="mt-1 text-sm text-red-600">{fieldErrors.descripcion}</p>
+              )}
             </div>
 
             <div className='mt-6 flex gap-3 justify-end'>

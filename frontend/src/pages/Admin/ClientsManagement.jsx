@@ -19,6 +19,135 @@ const ClientsManagement = () => {
     role: 'client'
   });
 
+  // Estados para errores de validación
+  const [fieldErrors, setFieldErrors] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    password: ''
+  });
+
+  // Validaciones siguiendo ISO 25010
+  const validaciones = {
+    name: (valor) => {
+      if (!valor || valor.trim().length === 0) {
+        return 'El nombre es requerido';
+      }
+      if (valor.trim().length < 3) {
+        return 'El nombre debe tener al menos 3 caracteres';
+      }
+      if (valor.length > 100) {
+        return 'El nombre no puede exceder 100 caracteres';
+      }
+      // Solo letras, espacios, tildes y ñ
+      const regexNombre = /^[a-záéíóúñüA-ZÁÉÍÓÚÑÜ\s]+$/;
+      if (!regexNombre.test(valor)) {
+        return 'El nombre solo puede contener letras y espacios';
+      }
+      if (/\s{2,}/.test(valor)) {
+        return 'El nombre no puede contener espacios múltiples consecutivos';
+      }
+      return '';
+    },
+
+    email: (valor) => {
+      if (!valor || valor.trim().length === 0) {
+        return 'El email es requerido';
+      }
+      if (valor.length < 5) {
+        return 'El email debe tener al menos 5 caracteres';
+      }
+      if (valor.length > 254) {
+        return 'El email no puede exceder 254 caracteres';
+      }
+      // Regex completo para validar email
+      const regexEmail = /^[a-zA-Z0-9]([a-zA-Z0-9._-]{0,63})?@[a-zA-Z0-9]([a-zA-Z0-9.-]{0,253})?[a-zA-Z0-9]\.[a-zA-Z]{2,}$/;
+      if (!regexEmail.test(valor)) {
+        return 'Ingrese un email válido (ej: usuario@dominio.com)';
+      }
+      if (/[<>()[\]\\,;:"\s]/.test(valor.split('@')[0])) {
+        return 'El email contiene caracteres no permitidos';
+      }
+      return '';
+    },
+
+    phone: (valor) => {
+      // El teléfono es opcional, pero si se ingresa debe ser válido
+      if (!valor || valor.trim().length === 0) {
+        return ''; // Opcional, sin error si está vacío
+      }
+      
+      const telefonoLimpio = valor.replace(/[\s-]/g, '');
+      
+      if (telefonoLimpio.length < 7) {
+        return 'El teléfono debe tener al menos 7 dígitos';
+      }
+      if (telefonoLimpio.length > 15) {
+        return 'El teléfono no puede exceder 15 dígitos';
+      }
+      const regexTelefono = /^[\d\s\-()]+$/;
+      if (!regexTelefono.test(valor)) {
+        return 'El teléfono solo puede contener números, espacios, guiones y paréntesis';
+      }
+      const digitosCount = (telefonoLimpio.match(/\d/g) || []).length;
+      if (digitosCount < 7) {
+        return 'El teléfono debe contener al menos 7 dígitos';
+      }
+      return '';
+    },
+
+    password: (valor) => {
+      if (!valor || valor.length === 0) {
+        return 'La contraseña es requerida';
+      }
+      if (valor.length < 8) {
+        return 'La contraseña debe tener al menos 8 caracteres';
+      }
+      if (valor.length > 128) {
+        return 'La contraseña no puede exceder 128 caracteres';
+      }
+      if (!/[A-Z]/.test(valor)) {
+        return 'La contraseña debe contener al menos una letra mayúscula';
+      }
+      if (!/[a-z]/.test(valor)) {
+        return 'La contraseña debe contener al menos una letra minúscula';
+      }
+      if (!/\d/.test(valor)) {
+        return 'La contraseña debe contener al menos un número';
+      }
+      if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(valor)) {
+        return 'La contraseña debe contener al menos un carácter especial';
+      }
+      if (/\s/.test(valor)) {
+        return 'La contraseña no puede contener espacios';
+      }
+      return '';
+    }
+  };
+
+  // Validar un campo específico
+  const validarCampo = (campo, valor) => {
+    const mensajeError = validaciones[campo](valor);
+    setFieldErrors(prev => ({
+      ...prev,
+      [campo]: mensajeError
+    }));
+    return mensajeError === '';
+  };
+
+  // Validar todos los campos antes de enviar
+  const validarFormulario = () => {
+    const errores = {
+      name: validaciones.name(formData.name),
+      email: validaciones.email(formData.email),
+      phone: validaciones.phone(formData.phone),
+      password: validaciones.password(formData.password)
+    };
+
+    setFieldErrors(errores);
+    return Object.values(errores).every(error => error === '');
+  };
+
   useEffect(() => {
     loadClients();
   }, []);
@@ -39,15 +168,19 @@ const ClientsManagement = () => {
   };
 
   const handleCreateClient = async () => {
-    if (!formData.name || !formData.email || !formData.password) {
-      alert('Por favor completa los campos obligatorios');
+    // Validar todos los campos
+    if (!validarFormulario()) {
+      alert('Por favor, corrija los errores en el formulario');
       return;
     }
 
     try {
       setLoading(true);
       const newClient = await userService.createUser({
-        ...formData,
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim() || null,
+        password: formData.password,
         role: 'client'
       });
       setClients([newClient, ...clients]);
@@ -85,6 +218,12 @@ const ClientsManagement = () => {
       phone: '',
       password: '',
       role: 'client'
+    });
+    setFieldErrors({
+      name: '',
+      email: '',
+      phone: '',
+      password: ''
     });
   };
 
@@ -325,10 +464,19 @@ const ClientsManagement = () => {
                 </label>
                 <input
                   value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-green-500"
+                  onChange={(e) => {
+                    setFormData({...formData, name: e.target.value});
+                    validarCampo('name', e.target.value);
+                  }}
+                  onBlur={(e) => validarCampo('name', e.target.value)}
+                  className={`w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 ${
+                    fieldErrors.name ? 'border-red-500 focus:ring-red-500' : 'focus:ring-green-500'
+                  }`}
                   placeholder="Nombre completo"
                 />
+                {fieldErrors.name && (
+                  <p className="mt-1 text-sm text-red-600">{fieldErrors.name}</p>
+                )}
               </div>
               <div>
                 <label className="block text-gray-700 font-medium mb-2">
@@ -337,19 +485,37 @@ const ClientsManagement = () => {
                 <input
                   type="email"
                   value={formData.email}
-                  onChange={(e) => setFormData({...formData, email: e.target.value})}
-                  className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-green-500"
+                  onChange={(e) => {
+                    setFormData({...formData, email: e.target.value});
+                    validarCampo('email', e.target.value);
+                  }}
+                  onBlur={(e) => validarCampo('email', e.target.value)}
+                  className={`w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 ${
+                    fieldErrors.email ? 'border-red-500 focus:ring-red-500' : 'focus:ring-green-500'
+                  }`}
                   placeholder="correo@ejemplo.com"
                 />
+                {fieldErrors.email && (
+                  <p className="mt-1 text-sm text-red-600">{fieldErrors.email}</p>
+                )}
               </div>
               <div>
-                <label className="block text-gray-700 font-medium mb-2">Teléfono</label>
+                <label className="block text-gray-700 font-medium mb-2">Teléfono (opcional)</label>
                 <input
                   value={formData.phone}
-                  onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                  className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-green-500"
+                  onChange={(e) => {
+                    setFormData({...formData, phone: e.target.value});
+                    validarCampo('phone', e.target.value);
+                  }}
+                  onBlur={(e) => validarCampo('phone', e.target.value)}
+                  className={`w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 ${
+                    fieldErrors.phone ? 'border-red-500 focus:ring-red-500' : 'focus:ring-green-500'
+                  }`}
                   placeholder="987654321"
                 />
+                {fieldErrors.phone && (
+                  <p className="mt-1 text-sm text-red-600">{fieldErrors.phone}</p>
+                )}
               </div>
               <div>
                 <label className="block text-gray-700 font-medium mb-2">
@@ -358,10 +524,19 @@ const ClientsManagement = () => {
                 <input
                   type="password"
                   value={formData.password}
-                  onChange={(e) => setFormData({...formData, password: e.target.value})}
-                  className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-green-500"
-                  placeholder="Mínimo 6 caracteres"
+                  onChange={(e) => {
+                    setFormData({...formData, password: e.target.value});
+                    validarCampo('password', e.target.value);
+                  }}
+                  onBlur={(e) => validarCampo('password', e.target.value)}
+                  className={`w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 ${
+                    fieldErrors.password ? 'border-red-500 focus:ring-red-500' : 'focus:ring-green-500'
+                  }`}
+                  placeholder="Mínimo 8 caracteres (mayús, minús, número, especial)"
                 />
+                {fieldErrors.password && (
+                  <p className="mt-1 text-sm text-red-600">{fieldErrors.password}</p>
+                )}
               </div>
             </div>
             <div className="flex gap-3 justify-end mt-6">
