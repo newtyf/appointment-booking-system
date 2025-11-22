@@ -68,23 +68,26 @@ const Register = () => {
       // Eliminar espacios y guiones para validación
       const telefonoLimpio = valor.replace(/[\s-]/g, '');
       
-      // Mínimo 7 dígitos, máximo 15 según ITU-T E.164
-      if (!telefonoLimpio || telefonoLimpio.length < 7) {
-        return 'El teléfono debe tener al menos 7 dígitos';
+      // Formato peruano: exactamente 9 dígitos
+      if (!telefonoLimpio || telefonoLimpio.length === 0) {
+        return 'El teléfono es requerido';
       }
-      if (telefonoLimpio.length > 15) {
-        return 'El teléfono no puede exceder 15 dígitos';
+      
+      // Solo números
+      if (!/^\d+$/.test(telefonoLimpio)) {
+        return 'El teléfono solo puede contener números';
       }
-      // Solo números, espacios, guiones y paréntesis
-      const regexTelefono = /^[\d\s\-()]+$/;
-      if (!regexTelefono.test(valor)) {
-        return 'El teléfono solo puede contener números, espacios, guiones y paréntesis';
+      
+      // Debe tener exactamente 9 dígitos
+      if (telefonoLimpio.length !== 9) {
+        return 'El teléfono debe tener exactamente 9 dígitos';
       }
-      // Debe contener al menos 7 dígitos numéricos
-      const digitosCount = (telefonoLimpio.match(/\d/g) || []).length;
-      if (digitosCount < 7) {
-        return 'El teléfono debe contener al menos 7 dígitos';
+      
+      // Debe comenzar con 9 (formato peruano de celular)
+      if (!telefonoLimpio.startsWith('9')) {
+        return 'El teléfono debe comenzar con 9';
       }
+      
       return '';
     },
 
@@ -334,7 +337,8 @@ const Register = () => {
                   className={`block w-full rounded-md border-0 py-2 pl-10 text-gray-900 ring-1 ring-inset ${
                     fieldErrors.telefono ? 'ring-red-500 focus:ring-red-600' : 'ring-gray-300 focus:ring-pink-600'
                   } placeholder:text-gray-400 focus:ring-2 focus:ring-inset sm:text-sm sm:leading-6`}
-                  placeholder="Ingrese su teléfono"
+                  placeholder="9xxxxxxxx (9 dígitos)"
+                  maxLength="9"
                   value={telefono}
                   onChange={(e) => {
                     setTelefono(e.target.value);

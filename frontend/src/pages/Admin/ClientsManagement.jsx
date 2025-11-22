@@ -511,7 +511,8 @@ const ClientsManagement = () => {
                   className={`w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 ${
                     fieldErrors.phone ? 'border-red-500 focus:ring-red-500' : 'focus:ring-green-500'
                   }`}
-                  placeholder="987654321"
+                  placeholder="9xxxxxxxx (9 dígitos)"
+                  maxLength="9"
                 />
                 {fieldErrors.phone && (
                   <p className="mt-1 text-sm text-red-600">{fieldErrors.phone}</p>

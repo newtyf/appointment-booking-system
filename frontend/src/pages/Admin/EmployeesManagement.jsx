@@ -71,24 +71,29 @@ const EmployeesManagement = () => {
     },
 
     phone: (value) => {
-      // El teléfono es opcional
+      // El teléfono es opcional, pero si se ingresa debe ser válido (formato peruano)
       if (!value || !value.trim()) {
         return '';
       }
       
-      // Contar solo dígitos
-      const digitos = value.replace(/\D/g, '');
+      // Eliminar espacios y guiones
+      const telefonoLimpio = value.replace(/[\s-]/g, '');
       
-      if (digitos.length < 7) {
-        return 'El teléfono debe tener al menos 7 dígitos';
+      // Solo números
+      if (!/^\d+$/.test(telefonoLimpio)) {
+        return 'El teléfono solo puede contener números';
       }
-      if (digitos.length > 15) {
-        return 'El teléfono no puede exceder 15 dígitos';
+      
+      // Debe tener exactamente 9 dígitos
+      if (telefonoLimpio.length !== 9) {
+        return 'El teléfono debe tener exactamente 9 dígitos';
       }
-      // Solo números, espacios, guiones y paréntesis
-      if (!/^[\d\s\-()]+$/.test(value)) {
-        return 'El teléfono solo puede contener números, espacios, guiones y paréntesis';
+      
+      // Debe comenzar con 9 (formato peruano de celular)
+      if (!telefonoLimpio.startsWith('9')) {
+        return 'El teléfono debe comenzar con 9';
       }
+      
       return '';
     },
 
@@ -532,7 +537,8 @@ const EmployeesManagement = () => {
                   className={`w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-purple-500 ${
                     fieldErrors.phone ? 'border-red-500' : ''
                   }`}
-                  placeholder="987654321"
+                  placeholder="9xxxxxxxx (9 dígitos)"
+                  maxLength="9"
                 />
                 {fieldErrors.phone && (
                   <p className="text-red-500 text-sm mt-1">{fieldErrors.phone}</p>
