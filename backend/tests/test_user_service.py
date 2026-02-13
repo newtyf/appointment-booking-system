@@ -71,7 +71,7 @@ class TestUserServiceGet:
     async def test_get_user_by_email_found(self, user_service, mock_db, sample_user):
         """Test getting user by email when user exists"""
         # Arrange
-        mock_result = AsyncMock()
+        mock_result = Mock()  # Regular Mock, not AsyncMock
         mock_scalars = Mock()
         mock_scalars.first.return_value = sample_user
         mock_result.scalars.return_value = mock_scalars
@@ -88,7 +88,7 @@ class TestUserServiceGet:
     async def test_get_user_by_email_not_found(self, user_service, mock_db):
         """Test getting user by email when user doesn't exist"""
         # Arrange
-        mock_result = AsyncMock()
+        mock_result = Mock()  # Regular Mock, not AsyncMock
         mock_scalars = Mock()
         mock_scalars.first.return_value = None
         mock_result.scalars.return_value = mock_scalars
@@ -104,7 +104,7 @@ class TestUserServiceGet:
     async def test_get_user_found(self, user_service, mock_db, sample_user):
         """Test getting user by ID when user exists"""
         # Arrange
-        mock_result = AsyncMock()
+        mock_result = Mock()  # Regular Mock, not AsyncMock
         mock_scalars = Mock()
         mock_scalars.first.return_value = sample_user
         mock_result.scalars.return_value = mock_scalars
@@ -120,7 +120,7 @@ class TestUserServiceGet:
     async def test_get_user_not_found(self, user_service, mock_db):
         """Test getting user by ID when user doesn't exist"""
         # Arrange
-        mock_result = AsyncMock()
+        mock_result = Mock()  # Regular Mock, not AsyncMock
         mock_scalars = Mock()
         mock_scalars.first.return_value = None
         mock_result.scalars.return_value = mock_scalars
@@ -146,7 +146,7 @@ class TestUserServiceGet:
             updated_at=datetime.now()
         )
 
-        mock_result = AsyncMock()
+        mock_result = Mock()  # Regular Mock, not AsyncMock
         mock_scalars = Mock()
         mock_scalars.all.return_value = [sample_user, user2]
         mock_result.scalars.return_value = mock_scalars
@@ -164,7 +164,7 @@ class TestUserServiceGet:
     async def test_get_all_users_empty(self, user_service, mock_db):
         """Test getting all users when no users exist"""
         # Arrange
-        mock_result = AsyncMock()
+        mock_result = Mock()  # Regular Mock, not AsyncMock
         mock_scalars = Mock()
         mock_scalars.all.return_value = []
         mock_result.scalars.return_value = mock_scalars
@@ -235,7 +235,7 @@ class TestUserServiceUpdate:
     ):
         """Test updating user successfully"""
         # Arrange
-        mock_result = AsyncMock()
+        mock_result = Mock()  # Regular Mock, not AsyncMock
         mock_scalars = Mock()
         mock_scalars.first.return_value = sample_user
         mock_result.scalars.return_value = mock_scalars
@@ -256,7 +256,7 @@ class TestUserServiceUpdate:
     ):
         """Test updating non-existent user"""
         # Arrange
-        mock_result = AsyncMock()
+        mock_result = Mock()  # Regular Mock, not AsyncMock
         mock_scalars = Mock()
         mock_scalars.first.return_value = None
         mock_result.scalars.return_value = mock_scalars
@@ -272,7 +272,7 @@ class TestUserServiceUpdate:
     async def test_update_user_password(self, user_service, mock_db, sample_user):
         """Test updating user password"""
         # Arrange
-        mock_result = AsyncMock()
+        mock_result = Mock()  # Regular Mock, not AsyncMock
         mock_scalars = Mock()
         mock_scalars.first.return_value = sample_user
         mock_result.scalars.return_value = mock_scalars
@@ -295,7 +295,7 @@ class TestUserServiceUpdate:
     async def test_update_user_partial_update(self, user_service, mock_db, sample_user):
         """Test partial update (only some fields)"""
         # Arrange
-        mock_result = AsyncMock()
+        mock_result = Mock()  # Regular Mock, not AsyncMock
         mock_scalars = Mock()
         mock_scalars.first.return_value = sample_user
         mock_result.scalars.return_value = mock_scalars
@@ -322,7 +322,7 @@ class TestUserServiceDelete:
     async def test_delete_user_success(self, user_service, mock_db, sample_user):
         """Test deleting user successfully"""
         # Arrange
-        mock_result = AsyncMock()
+        mock_result = Mock()  # Regular Mock, not AsyncMock
         mock_scalars = Mock()
         mock_scalars.first.return_value = sample_user
         mock_result.scalars.return_value = mock_scalars
@@ -339,7 +339,7 @@ class TestUserServiceDelete:
     async def test_delete_user_not_found(self, user_service, mock_db):
         """Test deleting non-existent user"""
         # Arrange
-        mock_result = AsyncMock()
+        mock_result = Mock()  # Regular Mock, not AsyncMock
         mock_scalars = Mock()
         mock_scalars.first.return_value = None
         mock_result.scalars.return_value = mock_scalars
