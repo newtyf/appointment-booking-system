@@ -55,11 +55,25 @@ async def process_image(
     replicate_model_version = "12b5a5a61e3419f792eb56cfc16eed046252740ebf5d470228f9b4cf2c861610"
 
     try:
-        print(f"Calling Replicate with version: {replicate_model_version}")
+        print(os.environ.get("REPLICATE_API_TOKEN"))
         prediction = await replicate.predictions.async_create(
-            version=replicate_model_version,
-            input={"image": data_uri, "prompt": prompt}
+            "google/nano-banana-2",
+            input={
+                "prompt": prompt,
+                "resolution": "1K",
+                "image_input": [data_uri],
+                "aspect_ratio": "match_input_image",
+                "image_search": False,
+                "google_search": False,
+                "output_format": "jpg"
+            }
         )
+
+        # print(f"Calling Replicate with version: {replicate_model_version}")
+        # prediction = await replicate.predictions.async_create(
+        #     version=replicate_model_version,
+        #     input={"image": data_uri, "prompt": prompt}
+        # )
         print(
             f"Replicate prediction initiated. ID: {prediction.id}, Status: {prediction.status}")
 
@@ -90,6 +104,7 @@ async def process_image(
                 detail="Replicate prediction succeeded but returned no output image."
             )
 
+        print(prediction)
         output_image_url = prediction.output
         print(
             f"Replicate prediction succeeded. Output URL: {output_image_url}, in {retries} seconds")
